@@ -1,0 +1,1229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Knight's Path — Slay the Dragon</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=MedievalSharp&family=Cinzel:wght@400;700;900&family=Cinzel+Decorative:wght@700;900&display=swap');
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --gold: #d4a017;
+    --gold-light: #f0d060;
+    --dark: #1a1a2e;
+    --darker: #0f0f1e;
+    --red: #8b0000;
+    --blue: #1565c0;
+    --blue-light: #42a5f5;
+    --green: #2e7d32;
+    --parchment: #f5e6c8;
+    --steel: #7b8794;
+    --dragon: #ff6600;
+  }
+
+  body {
+    font-family: 'Cinzel', serif;
+    background: var(--darker);
+    color: var(--parchment);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background:
+      radial-gradient(circle at 20% 50%, rgba(212,160,23,0.05) 0%, transparent 50%),
+      radial-gradient(circle at 80% 50%, rgba(21,101,192,0.05) 0%, transparent 50%);
+    pointer-events: none;
+  }
+
+  .container { max-width: 1100px; margin: 0 auto; padding: 12px; position: relative; z-index: 1; }
+
+  /* Side-by-side layout */
+  .game-layout { display: flex; gap: 16px; align-items: flex-start; }
+  .game-left { flex: 1; min-width: 0; }
+  .game-right { width: 280px; flex-shrink: 0; }
+
+  /* Header */
+  .header { text-align: center; padding: 15px 0 8px; }
+  .header h1 {
+    font-family: 'Cinzel Decorative', serif;
+    font-size: clamp(1.5rem, 4.5vw, 2.4rem);
+    color: var(--gold);
+    text-shadow: 0 0 20px rgba(212,160,23,0.4), 2px 2px 0 rgba(0,0,0,0.5);
+    letter-spacing: 3px;
+  }
+  .header .subtitle {
+    font-family: 'MedievalSharp', cursive;
+    font-size: clamp(0.8rem, 2vw, 1rem);
+    color: var(--steel);
+    margin-top: 3px;
+  }
+  .sword-divider {
+    display: flex; align-items: center; justify-content: center; gap: 10px;
+    margin: 8px 0; color: var(--gold); font-size: 1rem; opacity: 0.5;
+  }
+  .sword-divider::before, .sword-divider::after {
+    content: ''; height: 1px; width: 60px;
+    background: linear-gradient(to right, transparent, var(--gold), transparent);
+  }
+
+  /* Turn bar */
+  .turn-bar {
+    display: flex; justify-content: center; align-items: center; gap: 12px;
+    padding: 10px 16px; border-radius: 8px; margin-bottom: 10px;
+    transition: all 0.4s; border: 2px solid;
+  }
+  .turn-bar.p0 { background: linear-gradient(135deg, rgba(212,160,23,0.15), rgba(26,26,46,0.9)); border-color: rgba(212,160,23,0.5); }
+  .turn-bar.p1 { background: linear-gradient(135deg, rgba(21,101,192,0.15), rgba(26,26,46,0.9)); border-color: rgba(66,165,245,0.5); }
+  .turn-knight { font-size: 1.8rem; }
+  .turn-text { font-family: 'MedievalSharp', cursive; font-size: 1.1rem; }
+  .turn-bar.p0 .turn-text { color: var(--gold-light); }
+  .turn-bar.p1 .turn-text { color: var(--blue-light); }
+
+  /* Players bar */
+  .players-bar { display: flex; justify-content: space-between; gap: 10px; margin-bottom: 10px; }
+  .player-info {
+    flex: 1; padding: 8px 12px; border-radius: 8px;
+    background: rgba(26,26,46,0.7); border: 1px solid rgba(255,255,255,0.1);
+  }
+  .player-info.p0 { border-color: rgba(212,160,23,0.3); }
+  .player-info.p1 { border-color: rgba(66,165,245,0.3); }
+  .player-info .p-name { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 2px; }
+  .player-info.p0 .p-name { color: var(--gold); }
+  .player-info.p1 .p-name { color: var(--blue-light); }
+  .player-info .p-detail { font-family: 'MedievalSharp', cursive; font-size: 0.75rem; color: var(--steel); }
+  .dragon-info {
+    text-align: center; padding: 6px 14px; border-radius: 8px;
+    background: rgba(255,102,0,0.08); border: 1px solid rgba(255,102,0,0.3); min-width: 100px;
+  }
+  .dragon-info .d-label { font-size: 0.6rem; text-transform: uppercase; letter-spacing: 2px; color: var(--dragon); }
+  .dragon-info .d-number { font-family: 'Cinzel Decorative', serif; font-size: 1.4rem; color: var(--dragon); text-shadow: 0 0 10px rgba(255,102,0,0.3); }
+
+  /* Message */
+  .message {
+    text-align: center; padding: 7px; margin: 7px 0; border-radius: 6px;
+    font-family: 'MedievalSharp', cursive; font-size: 0.95rem;
+    animation: fadeIn 0.3s ease; min-height: 32px;
+  }
+  @keyframes fadeIn { from { opacity:0; transform:translateY(-6px); } to { opacity:1; transform:translateY(0); } }
+  .message.success { background: rgba(46,125,50,0.2); border: 1px solid rgba(76,175,80,0.4); color: #81c784; }
+  .message.error { background: rgba(139,0,0,0.2); border: 1px solid rgba(244,67,54,0.4); color: #ef9a9a; }
+  .message.info { background: rgba(212,160,23,0.1); border: 1px solid rgba(212,160,23,0.3); color: var(--gold); }
+
+  /* ═══ PATH BOARD ═══ */
+  .path-board {
+    padding: 14px 14px 14px 58px;
+    background: linear-gradient(145deg, #1e1e3a, #16162b);
+    border: 2px solid rgba(212,160,23,0.35);
+    border-radius: 12px;
+    box-shadow: 0 0 25px rgba(0,0,0,0.5), inset 0 0 25px rgba(0,0,0,0.3);
+    margin-bottom: 14px;
+  }
+
+  .path-row {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 2px;
+    position: relative;
+  }
+  .path-row.reverse { flex-direction: row-reverse; }
+
+  /* Connector between rows */
+  .path-connector {
+    display: flex;
+    justify-content: flex-end;
+    padding: 0 6px;
+    height: 18px;
+    margin-bottom: 2px;
+  }
+  .path-connector.left { justify-content: flex-start; }
+  .path-connector .conn-line {
+    width: 50px;
+    height: 100%;
+    border: 2px solid rgba(212,160,23,0.2);
+    border-top: none;
+    border-radius: 0 0 10px 10px;
+  }
+  .path-connector.left .conn-line { border-radius: 0 0 10px 10px; }
+
+  /* Castle wall dividers */
+  .path-divider {
+    height: 18px;
+    margin: 2px 0;
+    position: relative;
+    overflow: visible;
+  }
+  .path-divider .wall-body {
+    position: absolute;
+    bottom: 0;
+    height: 12px;
+    background: linear-gradient(180deg, #c9941a, #a07815 40%, #8a6a12);
+    border: 1px solid rgba(255,220,100,0.3);
+    border-radius: 2px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,220,100,0.2);
+  }
+  .path-divider .wall-merlons {
+    position: absolute;
+    top: 0;
+    display: flex;
+    gap: 6px;
+  }
+  .path-divider .wall-merlons .merlon {
+    width: 10px;
+    height: 10px;
+    background: linear-gradient(180deg, #c9941a, #a07815);
+    border: 1px solid rgba(255,220,100,0.3);
+    border-bottom: none;
+    border-radius: 2px 2px 0 0;
+    box-shadow: 0 -1px 3px rgba(0,0,0,0.3);
+  }
+  .path-divider.from-left .wall-body {
+    left: 0;
+    width: calc((100% - 5 * 4px) * 4 / 6 + 3 * 4px);
+  }
+  .path-divider.from-left .wall-merlons {
+    left: 3px;
+  }
+  .path-divider.from-right .wall-body {
+    right: 0;
+    width: calc((100% - 5 * 4px) * 4 / 6 + 3 * 4px);
+  }
+  .path-divider.from-right .wall-merlons {
+    right: 3px;
+    justify-content: flex-end;
+  }
+
+  /* Path cell */
+  .pcell {
+    flex: 1;
+    aspect-ratio: 1.15;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(145deg, #252545, #1e1e38);
+    border: 1.5px solid rgba(212,160,23,0.12);
+    border-radius: 8px;
+    position: relative;
+    transition: all 0.3s;
+    cursor: default;
+    user-select: none;
+    min-height: 54px;
+  }
+
+  .pcell .cell-pos {
+    position: absolute;
+    top: 2px;
+    left: 5px;
+    font-size: 0.5rem;
+    color: rgba(212,160,23,0.3);
+    font-family: 'Cinzel', serif;
+  }
+
+  .pcell .cell-num {
+    font-family: 'Cinzel', serif;
+    font-size: clamp(0.9rem, 2.8vw, 1.3rem);
+    font-weight: 700;
+    color: var(--parchment);
+    z-index: 1;
+  }
+
+  .pcell .cell-icon {
+    position: absolute;
+    font-size: clamp(1.2rem, 4vw, 1.8rem);
+    z-index: 2;
+    filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5));
+    pointer-events: none;
+  }
+
+  /* Knight on cell */
+  .pcell .knight-token {
+    position: absolute;
+    font-size: clamp(1rem, 3.5vw, 1.6rem);
+    z-index: 3;
+    filter: drop-shadow(0 2px 3px rgba(0,0,0,0.6));
+    transition: all 0.4s;
+  }
+  .pcell .knight-token.p0 { color: var(--gold-light); top: -2px; left: 4px; }
+  .pcell .knight-token.p1 { color: var(--blue-light); bottom: -2px; right: 4px; }
+  .pcell.has-both .knight-token.p0 { left: 2px; }
+  .pcell.has-both .knight-token.p1 { right: 2px; }
+
+  .pcell.knight-here-p0 { background: linear-gradient(145deg, rgba(212,160,23,0.2), rgba(180,130,10,0.1)); border-color: var(--gold); box-shadow: 0 0 10px rgba(212,160,23,0.2); }
+  .pcell.knight-here-p1 { background: linear-gradient(145deg, rgba(21,101,192,0.2), rgba(15,80,160,0.1)); border-color: var(--blue-light); box-shadow: 0 0 10px rgba(66,165,245,0.2); }
+  .pcell.knight-here-both { border-color: var(--gold); box-shadow: 0 0 10px rgba(212,160,23,0.15), 0 0 10px rgba(66,165,245,0.15); }
+
+  /* Dragon zone - wraps last two rows + dragon */
+  .dragon-zone {
+    display: flex;
+    gap: 4px;
+    align-items: stretch;
+  }
+  .dragon-zone .dragon-rows {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .dragon-zone .dragon-rows .path-connector { margin-bottom: 0; }
+
+  .dragon-big {
+    width: calc((100% - 5 * 4px) / 6 + 4px); /* ~1 column wide */
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(145deg, rgba(255,102,0,0.2), rgba(180,60,0,0.12));
+    border: 2px solid rgba(255,102,0,0.5);
+    border-radius: 10px;
+    box-shadow: 0 0 18px rgba(255,102,0,0.2);
+    position: relative;
+    padding: 8px 4px;
+  }
+  .dragon-big .dragon-emoji {
+    font-size: 2.2rem;
+    filter: drop-shadow(0 2px 6px rgba(255,102,0,0.4));
+  }
+  .dragon-big .dragon-num {
+    font-family: 'Cinzel Decorative', serif;
+    font-size: 1.4rem;
+    color: var(--dragon);
+    text-shadow: 0 0 10px rgba(255,102,0,0.3);
+    margin-top: 4px;
+  }
+  .dragon-big .dragon-label {
+    font-family: 'MedievalSharp', cursive;
+    font-size: 0.55rem;
+    color: var(--dragon);
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    opacity: 0.7;
+  }
+  .dragon-big.valid-slay {
+    border-color: var(--dragon);
+    box-shadow: 0 0 20px rgba(255,102,0,0.5);
+    animation: pulse 1.2s ease-in-out infinite;
+  }
+
+  /* Start cell (left of row) */
+  .start-cell {
+    width: 40px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.4rem;
+    filter: drop-shadow(0 2px 3px rgba(0,0,0,0.6));
+    border: 1px dashed rgba(212,160,23,0.2);
+    border-radius: 8px;
+    margin-right: 4px;
+  }
+  .start-cell.p0 { color: var(--gold-light); border-color: rgba(212,160,23,0.3); position: absolute; left: -44px; top: 0; bottom: 0; }
+  .start-cell.p1 { color: var(--blue-light); border-color: rgba(66,165,245,0.3); position: absolute; left: -44px; top: 0; bottom: 0; }
+
+  /* Obstacle */
+  .pcell.obstacle-p0 { border-color: rgba(212,160,23,0.4); background: linear-gradient(145deg, rgba(212,160,23,0.1), rgba(100,80,20,0.1)); }
+  .pcell.obstacle-p1 { border-color: rgba(66,165,245,0.4); background: linear-gradient(145deg, rgba(21,101,192,0.1), rgba(15,60,120,0.1)); }
+  .pcell.obstacle-p0::after, .pcell.obstacle-p1::after {
+    content: '\26D4';
+    position: absolute; bottom: 1px; right: 3px;
+    font-size: 0.6rem; opacity: 0.7;
+  }
+
+  /* Valid target highlights */
+  .pcell.valid-move { border-color: #4caf50; box-shadow: 0 0 10px rgba(76,175,80,0.3); animation: pulse 1.5s ease-in-out infinite; }
+  .pcell.valid-obstacle { border-color: #ff9800; box-shadow: 0 0 10px rgba(255,152,0,0.3); animation: pulse 1.5s ease-in-out infinite; }
+  .pcell.valid-break { border-color: #f44336; box-shadow: 0 0 10px rgba(244,67,54,0.3); animation: pulse 1.5s ease-in-out infinite; }
+  .pcell.valid-slay { border-color: var(--dragon); box-shadow: 0 0 12px rgba(255,102,0,0.4); animation: pulse 1.2s ease-in-out infinite; }
+  @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.7; } }
+
+  .pcell.move-anim { animation: knightLand 0.5s ease; }
+  @keyframes knightLand { 0% { transform:scale(0.5); opacity:0.3; } 50% { transform:scale(1.12); } 100% { transform:scale(1); } }
+
+  /* Dice */
+  .dice-section { text-align: center; margin-bottom: 10px; }
+  .dice-row { display: flex; justify-content: center; gap: 12px; margin-bottom: 10px; }
+  .die {
+    width: 52px; height: 52px;
+    background: linear-gradient(145deg, #f5e6c8, #dcc8a0);
+    border: 2px solid var(--gold); border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Cinzel Decorative', serif; font-size: 1.5rem; font-weight: 900;
+    color: var(--dark);
+    box-shadow: 0 3px 8px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.3);
+    transition: all 0.3s;
+  }
+  .die.rolling { animation: dieRoll 0.4s ease infinite; }
+  .die.used { opacity: 0.35; border-color: var(--steel); transform: scale(0.9); }
+  @keyframes dieRoll { 0%{transform:rotate(0)scale(1)} 25%{transform:rotate(15deg)scale(1.05)} 50%{transform:rotate(-10deg)scale(0.95)} 75%{transform:rotate(5deg)scale(1.02)} 100%{transform:rotate(0)scale(1)} }
+
+  /* Action selector */
+  .action-selector { display: flex; justify-content: center; gap: 6px; margin-bottom: 10px; flex-wrap: wrap; }
+  .action-btn-select {
+    font-family: 'Cinzel', serif; font-size: 0.65rem; padding: 7px 12px;
+    border-radius: 6px; cursor: pointer; transition: all 0.3s;
+    border: 1px solid rgba(255,255,255,0.15); letter-spacing: 1px;
+    background: rgba(26,26,46,0.6); color: var(--steel);
+  }
+  .action-btn-select.active { color: #fff; font-weight: 700; }
+  .action-btn-select[data-action="move"].active { background: rgba(76,175,80,0.2); border-color: #4caf50; color: #81c784; }
+  .action-btn-select[data-action="obstacle"].active { background: rgba(255,152,0,0.2); border-color: #ff9800; color: #ffb74d; }
+  .action-btn-select[data-action="break"].active { background: rgba(244,67,54,0.2); border-color: #f44336; color: #ef9a9a; }
+  .action-btn-select[data-action="slay"].active { background: rgba(255,102,0,0.2); border-color: var(--dragon); color: var(--dragon); }
+  .action-btn-select:disabled { opacity: 0.25; cursor: not-allowed; }
+
+  /* Equation builder */
+  .equation-section { margin-bottom: 10px; }
+  .equation-section h3 { font-family: 'MedievalSharp', cursive; text-align: center; color: var(--gold); font-size: 0.85rem; margin-bottom: 6px; }
+  .eq-display {
+    display: flex; align-items: center; justify-content: center; gap: 4px; flex-wrap: wrap;
+    padding: 8px; background: rgba(0,0,0,0.3); border: 1px solid rgba(212,160,23,0.15);
+    border-radius: 6px; min-height: 40px; margin-bottom: 6px;
+    font-family: 'Cinzel', serif; font-size: 1.15rem; color: var(--parchment); letter-spacing: 2px;
+  }
+  .eq-display .token { padding: 2px 3px; border-radius: 3px; }
+  .eq-display .token.num { color: var(--gold-light); }
+  .eq-display .token.free { color: #a8d8a8; }
+  .eq-display .token.op { color: var(--steel); }
+  .eq-result { text-align: center; font-family: 'MedievalSharp', cursive; font-size: 0.95rem; padding: 4px; color: var(--gold); min-height: 24px; }
+  .eq-result.valid { color: #4caf50; }
+  .eq-result.invalid { color: #f44336; }
+
+  .token-palette { display: flex; flex-direction: column; gap: 5px; align-items: center; }
+  .palette-row { display: flex; gap: 4px; flex-wrap: wrap; justify-content: center; }
+  .eq-token {
+    display: flex; align-items: center; justify-content: center;
+    min-width: 36px; height: 36px; padding: 0 8px; border-radius: 6px;
+    font-family: 'Cinzel', serif; font-size: 1rem; font-weight: 700;
+    cursor: pointer; transition: all 0.2s; user-select: none;
+  }
+  .eq-token.number { background: linear-gradient(145deg, #f5e6c8, #dcc8a0); color: var(--dark); border: 1px solid var(--gold); }
+  .eq-token.operator { background: linear-gradient(145deg, #2e2e5e, #222248); color: var(--gold-light); border: 1px solid rgba(212,160,23,0.4); font-size: 1.1rem; }
+  .eq-token.paren { background: linear-gradient(145deg, #1e3a1e, #163016); color: #88cc88; border: 1px solid rgba(46,125,50,0.4); font-size: 1.2rem; min-width: 28px; }
+  .eq-token.special { background: linear-gradient(145deg, #3a1e3a, #301630); color: #cc88cc; border: 1px solid rgba(125,46,125,0.4); font-size: 0.8rem; }
+  .eq-token.free-num { background: linear-gradient(145deg, #2a3a2a, #1e2e1e); color: #a8d8a8; border: 1px solid rgba(76,175,80,0.4); font-size: 0.85rem; min-width: 28px; padding: 0 4px; }
+  .eq-token:hover { transform: scale(1.1); box-shadow: 0 0 8px rgba(212,160,23,0.3); }
+  .free-label { font-family: 'MedievalSharp', cursive; font-size: 0.6rem; color: var(--steel); text-align: center; margin-bottom: 2px; opacity: 0.7; }
+
+  .action-btns { display: flex; gap: 7px; justify-content: center; margin-top: 8px; flex-wrap: wrap; }
+  .action-btn {
+    font-family: 'Cinzel', serif; font-size: 0.72rem; padding: 6px 14px;
+    border-radius: 6px; cursor: pointer; letter-spacing: 1px; transition: all 0.3s; border: 1px solid;
+  }
+  .btn-submit { background: linear-gradient(145deg, var(--green), #1b5e20); color: var(--parchment); border-color: #4caf50; }
+  .btn-submit:hover:not(:disabled) { box-shadow: 0 0 12px rgba(76,175,80,0.4); }
+  .btn-submit:disabled { opacity: 0.3; cursor: not-allowed; }
+  .btn-clear { background: linear-gradient(145deg, #444, #333); color: var(--parchment); border-color: #666; }
+  .btn-undo { background: linear-gradient(145deg, #553300, #442200); color: var(--gold-light); border-color: var(--gold); }
+  .btn-skip { background: linear-gradient(145deg, #333, #222); color: var(--steel); border-color: var(--steel); }
+
+  /* Victory */
+  .overlay {
+    display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.88);
+    z-index: 100; align-items: center; justify-content: center; flex-direction: column;
+    gap: 18px; animation: fadeIn 0.5s ease;
+  }
+  .overlay.show { display: flex; }
+  .overlay h2 { font-family: 'Cinzel Decorative', serif; font-size: 2.3rem; color: var(--gold); text-shadow: 0 0 30px rgba(212,160,23,0.5); text-align: center; }
+  .overlay .victory-icon { font-size: 3.5rem; animation: dragonDeath 1s ease; }
+  @keyframes dragonDeath { 0%{transform:scale(1)rotate(0);opacity:1} 50%{transform:scale(1.4)rotate(12deg);opacity:0.8} 100%{transform:scale(1)rotate(0);opacity:1} }
+  .overlay p { font-family: 'MedievalSharp', cursive; font-size: 1.2rem; color: var(--parchment); text-align: center; }
+  .overlay button {
+    font-family: 'Cinzel Decorative', serif; font-size: 0.95rem; padding: 10px 30px;
+    background: linear-gradient(145deg, var(--gold), #b8860b); color: var(--dark);
+    border: none; border-radius: 8px; cursor: pointer; letter-spacing: 2px; transition: all 0.3s;
+  }
+  .overlay button:hover { transform: scale(1.05); box-shadow: 0 0 20px rgba(212,160,23,0.5); }
+
+  /* History */
+  .history {
+    margin-top: 10px; padding: 10px; background: rgba(26,26,46,0.4);
+    border: 1px solid rgba(212,160,23,0.15); border-radius: 8px;
+    max-height: 140px; overflow-y: auto;
+  }
+  .history h4 { font-family: 'MedievalSharp', cursive; color: var(--gold); margin-bottom: 6px; font-size: 0.8rem; }
+  .history-entry {
+    font-family: 'Cinzel', serif; font-size: 0.65rem; color: var(--steel);
+    padding: 2px 0; border-bottom: 1px solid rgba(255,255,255,0.05);
+  }
+  .history-entry .p0c { color: var(--gold-light); }
+  .history-entry .p1c { color: var(--blue-light); }
+  .history-entry span { color: var(--gold-light); }
+
+  .new-quest-btn {
+    display: block; margin: 10px auto 0; background: none; border: 1px solid var(--gold);
+    color: var(--gold); padding: 5px 16px; border-radius: 4px;
+    font-family: 'Cinzel', serif; font-size: 0.65rem; cursor: pointer; transition: all 0.3s;
+  }
+  .new-quest-btn:hover { background: rgba(212,160,23,0.15); }
+
+  .calc-nav-btn {
+    background: linear-gradient(135deg, var(--gold), #a07815); color: var(--dark);
+    border: none; border-radius: 8px; padding: 8px 20px;
+    font-family: 'Cinzel', serif; font-size: 0.8rem; font-weight: 700;
+    cursor: pointer; box-shadow: 0 3px 10px rgba(0,0,0,0.4);
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+  .calc-nav-btn:hover { transform: scale(1.05); box-shadow: 0 5px 14px rgba(0,0,0,0.5); }
+
+  @media (max-width: 800px) {
+    .game-layout { flex-direction: column; }
+    .game-right { width: 100%; }
+  }
+  @media (max-width: 500px) {
+    .pcell { min-height: 44px; }
+    .pcell .cell-num { font-size: 0.8rem; }
+    .die { width: 44px; height: 44px; font-size: 1.2rem; }
+    .eq-token { min-width: 30px; height: 30px; font-size: 0.85rem; }
+    .players-bar { flex-direction: column; gap: 6px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <div class="header">
+    <h1>Knight's Path</h1>
+    <p class="subtitle">Race to the Dragon. Slay the beast. Claim victory.</p>
+  </div>
+  <div class="sword-divider">&cross;</div>
+
+  <!-- Turn -->
+  <div class="turn-bar p0" id="turnBar">
+    <span class="turn-knight" id="turnKnight">&#9822;</span>
+    <span class="turn-text" id="turnText">Gold Knight's Turn</span>
+  </div>
+
+  <!-- Players + Dragon -->
+  <div class="players-bar">
+    <div class="player-info p0">
+      <div class="p-name">&#9822; Gold Knight</div>
+      <div class="p-detail">Pos: <span id="p0pos">Start</span> | Walls: <span id="p0obs">0</span>/3</div>
+    </div>
+    <div class="dragon-info">
+      <div class="d-label">Dragon</div>
+      <div class="d-number" id="dragonNumber">?</div>
+    </div>
+    <div class="player-info p1">
+      <div class="p-name">&#9822; Blue Knight</div>
+      <div class="p-detail">Pos: <span id="p1pos">Start</span> | Walls: <span id="p1obs">0</span>/3</div>
+    </div>
+  </div>
+
+  <!-- Message -->
+  <div class="message info" id="message">Prepare for battle!</div>
+  <div style="text-align:center;margin:8px 0 4px;">
+    <button class="calc-nav-btn" onclick="goToCalculator()">&#9876; Go to Calculator</button>
+  </div>
+
+  <div class="game-layout">
+    <!-- LEFT: Path Board -->
+    <div class="game-left">
+      <div class="path-board" id="pathBoard"></div>
+      <!-- History -->
+      <div class="history"><h4>Battle Chronicle</h4><div id="historyLog"></div></div>
+      <button class="new-quest-btn" onclick="newGame()">New Quest</button>
+    </div>
+
+    <!-- RIGHT: Controls -->
+    <div class="game-right">
+      <!-- Dice -->
+      <div class="dice-section">
+        <div class="dice-row">
+          <div class="die" id="die1">?</div>
+          <div class="die" id="die2">?</div>
+          <div class="die" id="die3">?</div>
+        </div>
+      </div>
+
+      <!-- Action Selector -->
+      <div class="action-selector">
+        <button class="action-btn-select active" data-action="move">Advance</button>
+        <button class="action-btn-select" data-action="obstacle">Place Wall</button>
+        <button class="action-btn-select" data-action="break">Break Wall</button>
+        <button class="action-btn-select" data-action="slay" id="slayBtn" disabled>Slay Dragon</button>
+      </div>
+
+      <!-- Equation Builder -->
+      <div class="equation-section">
+        <h3 id="eqTitle">Solve = cell number to advance</h3>
+        <div class="eq-display" id="eqDisplay">
+          <span style="color:var(--steel);font-size:0.8rem;">Build an equation to match a target</span>
+        </div>
+        <div class="eq-result" id="eqResult"></div>
+        <div class="token-palette">
+          <div class="palette-row" id="diceTokens"></div>
+          <div class="palette-row">
+            <div class="eq-token operator" onclick="addToken('+')">+</div>
+            <div class="eq-token operator" onclick="addToken('-')">&#8722;</div>
+            <div class="eq-token operator" onclick="addToken('*')">&times;</div>
+            <div class="eq-token operator" onclick="addToken('/')">&#247;</div>
+            <div class="eq-token operator" onclick="addToken('^')">^</div>
+            <div class="eq-token special" onclick="addToken('sqrt(')">&#8730;</div>
+          </div>
+          <div class="free-label">Free exponents</div>
+          <div class="palette-row" id="freeNumRow1"></div>
+          <div class="palette-row" id="freeNumRow2"></div>
+          <div class="palette-row">
+            <div class="eq-token paren" onclick="addToken('(')">(</div>
+            <div class="eq-token paren" onclick="addToken(')')">)</div>
+          </div>
+        </div>
+        <div class="action-btns">
+          <button class="action-btn btn-undo" onclick="undoToken()">Undo</button>
+          <button class="action-btn btn-clear" onclick="clearEquation()">Clear</button>
+          <button class="action-btn btn-submit" onclick="submitEquation()">Strike!</button>
+          <button class="action-btn btn-skip" onclick="skipTurn()">Skip Turn</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Victory -->
+<div class="overlay" id="victoryOverlay">
+  <div class="victory-icon" id="victoryIcon"></div>
+  <h2 id="victoryTitle">Victory!</h2>
+  <p id="victoryMsg"></p>
+  <button onclick="newGame();document.getElementById('victoryOverlay').classList.remove('show');">Quest Anew</button>
+</div>
+
+<script>
+// ── Constants ────────────────────────────────────────────
+const NAMES = ['Gold Knight', 'Blue Knight'];
+const ICONS = ['\u2658', '\u265E']; // ♘ ♞
+const MAX_OBS = 3;
+const FREE_EXPONENTS = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]; // numbers available as free exponents (don't consume dice)
+
+// ── Grid & Movement ──────────────────────────────────────
+const DRAGON_POSITIONS = [30, 31]; // replaced by big dragon cell
+
+// Convert path position (1-36) to visual grid (row, col) accounting for serpentine
+function posToGrid(pos) {
+  const idx = pos - 1;
+  const row = Math.floor(idx / 6);
+  const colInRow = idx % 6;
+  const col = (row % 2 === 0) ? colInRow : (5 - colInRow);
+  return { row, col };
+}
+
+// Convert visual grid (row, col) back to path position
+function gridToPos(row, col) {
+  const colInRow = (row % 2 === 0) ? col : (5 - col);
+  return row * 6 + colInRow + 1;
+}
+
+// Gold lines partially block row transitions
+// Line between rows 1-2: covers visual columns 0-3 (cols 4-5 are open)
+// Line between rows 3-4: covers visual columns 2-5 (cols 0-1 are open)
+function isGoldLineBlocked(fromRow, toRow, fromCol, toCol) {
+  if (Math.abs(fromRow - toRow) !== 1) return false;
+  const minRow = Math.min(fromRow, toRow);
+  if (minRow === 1) return fromCol <= 3 || toCol <= 3; // top gold line
+  if (minRow === 3) return fromCol >= 2 || toCol >= 2; // bottom gold line
+  return false;
+}
+
+// ── State ────────────────────────────────────────────────
+let boardNums = [];        // boardNums[pathPos] = randomized number (pathPos 0-35)
+let knightPos = [0, 0];   // path position 0 = start (off-board), 1-36 = on path
+let obstacles = new Map(); // pathPos -> placedByPlayer
+let obsCount = [0, 0];
+let dragon = { number: 0 };
+let currentPlayer = 0;
+let selectedAction = 'move';
+let dice = [0,0,0];
+let diceUsed = [false,false,false];
+let tokens = [];
+let gameOver = false;
+let skipCount = [0,0];
+
+// ── Movement helpers ─────────────────────────────────────
+function shuffleArray(arr) {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
+// Get king-style neighbors (all 8 directions), respecting gold line barriers
+function getGridNeighbors(pos) {
+  const { row, col } = posToGrid(pos);
+  const neighbors = [];
+  for (let dr = -1; dr <= 1; dr++) {
+    for (let dc = -1; dc <= 1; dc++) {
+      if (dr === 0 && dc === 0) continue;
+      const nr = row + dr;
+      const nc = col + dc;
+      if (nr < 0 || nr >= 6 || nc < 0 || nc >= 6) continue;
+      if (dr !== 0 && isGoldLineBlocked(row, nr, col, nc)) continue;
+      neighbors.push(gridToPos(nr, nc));
+    }
+  }
+  return neighbors;
+}
+
+function getReachableCells(playerIdx) {
+  const pos = knightPos[playerIdx];
+  const opp = 1 - playerIdx;
+  const oppPos = knightPos[opp];
+
+  // From start: can move to leftmost cell of row 0 or row 1
+  if (pos === 0) {
+    const entry1 = gridToPos(0, 0); // row 0, visual col 0 (leftmost)
+    const entry2 = gridToPos(1, 0); // row 1, visual col 0 (leftmost)
+    return [entry1, entry2].filter(p =>
+      p !== oppPos && !DRAGON_POSITIONS.includes(p) &&
+      !(obstacles.has(p) && obstacles.get(p) === opp)
+    );
+  }
+
+  return getGridNeighbors(pos).filter(p =>
+    !DRAGON_POSITIONS.includes(p) &&
+    p !== oppPos &&
+    !(obstacles.has(p) && obstacles.get(p) === opp)
+  );
+}
+
+function getObstacleCells(opponentIdx) {
+  // Can place walls on cells adjacent to the opponent
+  const oppPos = knightPos[opponentIdx];
+  if (oppPos === 0) return [];
+
+  return getGridNeighbors(oppPos).filter(p =>
+    !DRAGON_POSITIONS.includes(p) &&
+    !obstacles.has(p) &&
+    knightPos[0] !== p && knightPos[1] !== p
+  );
+}
+
+function canSlayDragon() {
+  const pos = knightPos[currentPlayer];
+  if (pos === 0) return false;
+  // Can slay if any neighbor is a dragon position
+  return getGridNeighbors(pos).some(p => DRAGON_POSITIONS.includes(p));
+}
+
+function getOpponentObstacles() {
+  const opp = 1 - currentPlayer;
+  const result = [];
+  for (const [pos, owner] of obstacles) {
+    if (owner === opp) {
+      result.push({ pos, number: boardNums[pos - 1] });
+    }
+  }
+  return result;
+}
+
+// ── Render Board ─────────────────────────────────────────
+function buildCell(pathPos) {
+  const cell = document.createElement('div');
+  cell.className = 'pcell';
+  cell.dataset.pos = pathPos;
+  cell.id = `pcell-${pathPos}`;
+
+  const posSpan = document.createElement('span');
+  posSpan.className = 'cell-pos';
+  posSpan.textContent = pathPos;
+  cell.appendChild(posSpan);
+
+  const numSpan = document.createElement('span');
+  numSpan.className = 'cell-num';
+  numSpan.textContent = boardNums[pathPos - 1];
+  cell.appendChild(numSpan);
+
+  const k0here = knightPos[0] === pathPos;
+  const k1here = knightPos[1] === pathPos;
+  if (k0here && k1here) {
+    cell.classList.add('knight-here-both', 'has-both');
+  } else if (k0here) {
+    cell.classList.add('knight-here-p0');
+  } else if (k1here) {
+    cell.classList.add('knight-here-p1');
+  }
+  if (k0here) {
+    const kt = document.createElement('span');
+    kt.className = 'knight-token p0'; kt.textContent = ICONS[0];
+    cell.appendChild(kt);
+  }
+  if (k1here) {
+    const kt = document.createElement('span');
+    kt.className = 'knight-token p1'; kt.textContent = ICONS[1];
+    cell.appendChild(kt);
+  }
+
+  if (obstacles.has(pathPos)) {
+    cell.classList.add(`obstacle-p${obstacles.get(pathPos)}`);
+  }
+
+  return cell;
+}
+
+function renderBoard() {
+  const board = document.getElementById('pathBoard');
+  board.innerHTML = '';
+
+  // Dragon zone positions: pos 30 (end of row 4) and pos 31 (start of row 5, visually on right due to reverse)
+  const DRAGON_POSITIONS = [30, 31];
+  let dragonZone = null;
+  let dragonRows = null;
+
+  for (let row = 0; row < 6; row++) {
+    const isDragonRow = (row === 4 || row === 5);
+    const rowDiv = document.createElement('div');
+    rowDiv.className = 'path-row' + (row % 2 === 1 ? ' reverse' : '');
+
+    // Start cells to the left of rows 1 and 2
+    if (row === 0 && knightPos[0] === 0) {
+      const sc = document.createElement('div');
+      sc.className = 'start-cell p0';
+      sc.textContent = ICONS[0];
+      rowDiv.appendChild(sc);
+    }
+    if (row === 1 && knightPos[1] === 0) {
+      const sc = document.createElement('div');
+      sc.className = 'start-cell p1';
+      sc.textContent = ICONS[1];
+      rowDiv.appendChild(sc);
+    }
+
+    // Create dragon zone wrapper when we hit row 4
+    if (row === 4) {
+      dragonZone = document.createElement('div');
+      dragonZone.className = 'dragon-zone';
+      dragonRows = document.createElement('div');
+      dragonRows.className = 'dragon-rows';
+    }
+
+    for (let i = 0; i < 6; i++) {
+      const pathPos = row * 6 + i + 1; // 1-36
+      // Skip dragon positions (they're replaced by the big dragon cell)
+      if (DRAGON_POSITIONS.includes(pathPos)) continue;
+
+      const cell = buildCell(pathPos);
+      rowDiv.appendChild(cell);
+    }
+
+    if (isDragonRow) {
+      dragonRows.appendChild(rowDiv);
+    } else {
+      board.appendChild(rowDiv);
+    }
+
+    // Connector between rows
+    if (row < 5) {
+      const conn = document.createElement('div');
+      conn.className = 'path-connector' + (row % 2 === 0 ? '' : ' left');
+      const line = document.createElement('div');
+      line.className = 'conn-line';
+      conn.appendChild(line);
+      if (isDragonRow) {
+        dragonRows.appendChild(conn);
+      } else {
+        board.appendChild(conn);
+      }
+    }
+
+    // Castle wall divider between row 2 and row 3 (from left, 4 cols)
+    if (row === 1) {
+      const divider = document.createElement('div');
+      divider.className = 'path-divider from-left';
+      const wallBody = document.createElement('div');
+      wallBody.className = 'wall-body';
+      const merlons = document.createElement('div');
+      merlons.className = 'wall-merlons';
+      for (let m = 0; m < 8; m++) {
+        const merlon = document.createElement('div');
+        merlon.className = 'merlon';
+        merlons.appendChild(merlon);
+      }
+      divider.appendChild(merlons);
+      divider.appendChild(wallBody);
+      board.appendChild(divider);
+    }
+    // Castle wall divider between row 4 and row 5 (from right, 4 cols)
+    if (row === 3) {
+      const divider = document.createElement('div');
+      divider.className = 'path-divider from-right';
+      const wallBody = document.createElement('div');
+      wallBody.className = 'wall-body';
+      const merlons = document.createElement('div');
+      merlons.className = 'wall-merlons';
+      for (let m = 0; m < 8; m++) {
+        const merlon = document.createElement('div');
+        merlon.className = 'merlon';
+        merlons.appendChild(merlon);
+      }
+      divider.appendChild(merlons);
+      divider.appendChild(wallBody);
+      board.appendChild(divider);
+    }
+
+    // After row 5, finalize dragon zone
+    if (row === 5) {
+      dragonZone.appendChild(dragonRows);
+
+      // Big dragon cell spanning both rows
+      const drg = document.createElement('div');
+      drg.className = 'dragon-big';
+      drg.id = 'dragon-big';
+      drg.innerHTML = `<span class="dragon-label">Dragon</span><span class="dragon-emoji">\uD83D\uDC32</span><span class="dragon-num">${dragon.number}</span>`;
+      dragonZone.appendChild(drg);
+
+      board.appendChild(dragonZone);
+    }
+  }
+
+  // Update position displays
+  document.getElementById('p0pos').textContent = knightPos[0] === 0 ? 'Start' : knightPos[0];
+  document.getElementById('p1pos').textContent = knightPos[1] === 0 ? 'Start' : knightPos[1];
+
+  document.getElementById('p0obs').textContent = obsCount[0];
+  document.getElementById('p1obs').textContent = obsCount[1];
+}
+
+// ── Highlights ───────────────────────────────────────────
+function clearHighlights() {
+  document.querySelectorAll('.pcell').forEach(c => c.classList.remove('valid-move','valid-obstacle','valid-break','valid-slay'));
+  const drg = document.getElementById('dragon-big');
+  if (drg) drg.classList.remove('valid-slay');
+}
+
+function highlightTargets() {
+  clearHighlights();
+  if (selectedAction === 'move') {
+    getReachableCells(currentPlayer).forEach(pos => {
+      const el = document.getElementById(`pcell-${pos}`);
+      if (el) el.classList.add('valid-move');
+    });
+  } else if (selectedAction === 'obstacle') {
+    getObstacleCells(1 - currentPlayer).forEach(pos => {
+      const el = document.getElementById(`pcell-${pos}`);
+      if (el) el.classList.add('valid-obstacle');
+    });
+  } else if (selectedAction === 'break') {
+    getOpponentObstacles().forEach(o => {
+      const el = document.getElementById(`pcell-${o.pos}`);
+      if (el) el.classList.add('valid-break');
+    });
+  } else if (selectedAction === 'slay') {
+    const el = document.getElementById('dragon-big');
+    if (el) el.classList.add('valid-slay');
+  }
+}
+
+// ── Turn Management ──────────────────────────────────────
+function startTurn() {
+  if (gameOver) return;
+  const bar = document.getElementById('turnBar');
+  bar.className = `turn-bar p${currentPlayer}`;
+  document.getElementById('turnKnight').textContent = ICONS[currentPlayer];
+  document.getElementById('turnText').textContent = `${NAMES[currentPlayer]}'s Turn`;
+
+  const canSlay = canSlayDragon();
+  document.getElementById('slayBtn').disabled = !canSlay;
+
+  selectAction('move');
+  rollDice();
+}
+
+function rollDice() {
+  const dieEls = [document.getElementById('die1'), document.getElementById('die2'), document.getElementById('die3')];
+  dieEls.forEach(d => { d.classList.add('rolling'); d.classList.remove('used'); });
+
+  setTimeout(() => {
+    do {
+      dice = [1,2,3].map(() => Math.floor(Math.random() * 6) + 1);
+    } while (dice[0] === 1 && dice[1] === 1 && dice[2] === 1);
+    diceUsed = [false,false,false];
+    dieEls.forEach((d,i) => { d.classList.remove('rolling'); d.textContent = dice[i]; });
+    clearEquation();
+    renderDiceTokens();
+
+    const canSlay = canSlayDragon();
+    if (canSlay) {
+      setMessage(`${NAMES[currentPlayer]} is near the dragon! Rolled ${dice.join(', ')}`, 'info');
+    } else {
+      setMessage(`${NAMES[currentPlayer]} rolled ${dice.join(', ')} — choose thy action!`, 'info');
+    }
+    highlightTargets();
+  }, 600);
+}
+
+function selectAction(action) {
+  selectedAction = action;
+  document.querySelectorAll('.action-btn-select').forEach(b => b.classList.toggle('active', b.dataset.action === action));
+  highlightTargets();
+  clearEquation();
+  const titles = {
+    move: 'Solve = cell number to advance',
+    obstacle: "Solve = cell number to block opponent",
+    break: 'Solve = 2\u00d7 wall number to destroy it',
+    slay: `Solve = ${dragon.number} to slay the dragon!`
+  };
+  document.getElementById('eqTitle').textContent = titles[action] || '';
+}
+
+document.querySelectorAll('.action-btn-select').forEach(btn => {
+  btn.addEventListener('click', () => { if (!btn.disabled) selectAction(btn.dataset.action); });
+});
+
+function endTurn() {
+  clearHighlights();
+  currentPlayer = 1 - currentPlayer;
+  setTimeout(() => startTurn(), 400);
+}
+
+function skipTurn() {
+  skipCount[currentPlayer]++;
+  addHistory(`<span class="p${currentPlayer}c">${NAMES[currentPlayer]}</span> skipped`);
+  if (skipCount[0] >= 3 && skipCount[1] >= 3) {
+    gameOver = true;
+    document.getElementById('victoryIcon').textContent = '\uD83E\uDD1D';
+    document.getElementById('victoryTitle').textContent = 'Stalemate!';
+    document.getElementById('victoryMsg').textContent = 'Both knights have yielded. The dragon lives on...';
+    document.getElementById('victoryOverlay').classList.add('show');
+    return;
+  }
+  setMessage(`${NAMES[currentPlayer]} passes...`, 'info');
+  endTurn();
+}
+
+// ── Equation Builder ─────────────────────────────────────
+function renderDiceTokens() {
+  const c = document.getElementById('diceTokens'); c.innerHTML = '';
+  dice.forEach((val, i) => {
+    const b = document.createElement('div');
+    b.className = `eq-token number${diceUsed[i] ? ' used' : ''}`;
+    if (diceUsed[i]) b.style.opacity = '0.3';
+    b.textContent = val; b.onclick = () => addDie(i);
+    c.appendChild(b);
+  });
+}
+function addDie(i) { if (diceUsed[i]) return; diceUsed[i]=true; tokens.push({type:'die',index:i,value:dice[i]}); renderEquation(); renderDiceTokens(); updateDieVisuals(); }
+function addFreeNum(n) { tokens.push({type:'free',value:n}); renderEquation(); }
+function renderFreeNums() {
+  const r1 = document.getElementById('freeNumRow1'); r1.innerHTML = '';
+  const r2 = document.getElementById('freeNumRow2'); r2.innerHTML = '';
+  FREE_EXPONENTS.forEach((n, i) => {
+    const b = document.createElement('div');
+    b.className = 'eq-token free-num';
+    b.textContent = n; b.onclick = () => addFreeNum(n);
+    (i < 5 ? r1 : r2).appendChild(b);
+  });
+}
+function addToken(t) { tokens.push({type:'op',value:t}); renderEquation(); }
+function undoToken() {
+  if (!tokens.length) return;
+  const r = tokens.pop();
+  if (r.type==='die') { diceUsed[r.index]=false; renderDiceTokens(); updateDieVisuals(); }
+  renderEquation();
+}
+function clearEquation() {
+  tokens=[]; diceUsed=[false,false,false];
+  renderDiceTokens(); renderEquation(); updateDieVisuals();
+  document.getElementById('eqResult').textContent = '';
+  document.getElementById('eqResult').className = 'eq-result';
+}
+function updateDieVisuals() {
+  ['die1','die2','die3'].forEach((id,i) => document.getElementById(id).classList.toggle('used', diceUsed[i]));
+}
+function renderEquation() {
+  const d = document.getElementById('eqDisplay');
+  if (!tokens.length) { d.innerHTML='<span style="color:var(--steel);font-size:0.8rem;">Build an equation to match a target</span>'; document.getElementById('eqResult').textContent=''; return; }
+  d.innerHTML = tokens.map(t => {
+    const cls = t.type==='die'?'num': t.type==='free'?'free':'op';
+    let v = t.value;
+    if(v==='*')v='\u00d7'; if(v==='/')v='\u00f7'; if(v==='-')v='\u2212'; if(v==='sqrt(')v='\u221a(';
+    return `<span class="token ${cls}">${v}</span>`;
+  }).join('');
+  evaluateEquation();
+}
+function evalExpression() {
+  let expr = tokens.map(t => { if(t.value==='^')return'**'; if(t.value==='sqrt(')return'Math.sqrt('; return t.value; }).join('');
+  const safe = expr.replace(/Math\.sqrt/g,'SQRT');
+  if (/[^0-9+\-*/().SQRT\s]/.test(safe)) return null;
+  try { const r = Function('"use strict"; return ('+expr+')')(); if(typeof r==='number'&&isFinite(r)) return Math.round(r*1000)/1000; } catch(e) {}
+  return null;
+}
+function evaluateEquation() {
+  const el = document.getElementById('eqResult');
+  const allUsed = diceUsed.every(u=>u);
+  const result = evalExpression();
+  if (result===null) { el.textContent=''; return; }
+
+  if (selectedAction==='slay') {
+    if (result===dragon.number && allUsed) { el.textContent=`= ${result} — THE DRAGON FALLS!`; el.className='eq-result valid'; }
+    else if (result===dragon.number) { el.textContent=`= ${result} (use all 3 dice)`; el.className='eq-result'; }
+    else { el.textContent=`= ${result} (need ${dragon.number})`; el.className='eq-result invalid'; }
+  } else if (selectedAction==='break') {
+    const obs = getOpponentObstacles();
+    const match = obs.find(o => o.number*2 === result);
+    if (match && allUsed) { el.textContent=`= ${result} — breaks wall on ${match.number}!`; el.className='eq-result valid'; }
+    else { el.textContent=`= ${result}`; el.className='eq-result'; }
+  } else {
+    if (allUsed) { el.textContent=`= ${result}`; el.className='eq-result valid'; }
+    else { el.textContent=`= ${result} (use all 3 dice)`; el.className='eq-result'; }
+  }
+}
+
+// ── Submit ───────────────────────────────────────────────
+function submitEquation() {
+  if (gameOver) return;
+  if (!diceUsed.every(u=>u)) { setMessage('Thou must use all three dice!','error'); return; }
+  const result = evalExpression();
+  if (result===null||!Number.isInteger(result)) { setMessage('Thy equation is malformed!','error'); return; }
+
+  if (selectedAction==='move') doMove(result);
+  else if (selectedAction==='obstacle') doObstacle(result);
+  else if (selectedAction==='break') doBreak(result);
+  else if (selectedAction==='slay') doSlay(result);
+}
+
+function doMove(result) {
+  const reachable = getReachableCells(currentPlayer);
+  const target = reachable.find(pos => boardNums[pos-1] === result);
+  if (!target) { setMessage(`No reachable cell with number ${result}!`,'error'); return; }
+
+  knightPos[currentPlayer] = target;
+  renderBoard();
+  const el = document.getElementById(`pcell-${target}`);
+  if (el) { el.classList.add('move-anim'); setTimeout(()=>el.classList.remove('move-anim'),500); }
+
+  addHistory(`<span class="p${currentPlayer}c">${NAMES[currentPlayer]}</span> moved to cell ${target} (<span>${result}</span>)`);
+  setMessage(`${NAMES[currentPlayer]} moves to cell ${target}!`,'success');
+  skipCount[currentPlayer]=0;
+  endTurn();
+}
+
+function doObstacle(result) {
+  if (obsCount[currentPlayer]>=MAX_OBS) { setMessage('No more walls! (3 max)','error'); return; }
+  const available = getObstacleCells(1-currentPlayer);
+  const target = available.find(pos => boardNums[pos-1]===result);
+  if (!target) { setMessage(`No valid wall cell with number ${result}!`,'error'); return; }
+
+  obstacles.set(target, currentPlayer);
+  obsCount[currentPlayer]++;
+  renderBoard(); highlightTargets();
+  addHistory(`<span class="p${currentPlayer}c">${NAMES[currentPlayer]}</span> placed wall on cell ${target}`);
+  setMessage(`${NAMES[currentPlayer]} erected a wall on cell ${target}!`,'success');
+  skipCount[currentPlayer]=0;
+  endTurn();
+}
+
+function doBreak(result) {
+  const obs = getOpponentObstacles();
+  const target = obs.find(o => o.number*2===result);
+  if (!target) { setMessage(`No opponent wall where 2\u00d7number = ${result}!`,'error'); return; }
+
+  obstacles.delete(target.pos);
+  obsCount[1-currentPlayer]--;
+  renderBoard();
+  addHistory(`<span class="p${currentPlayer}c">${NAMES[currentPlayer]}</span> destroyed wall on cell ${target.pos}`);
+  setMessage(`${NAMES[currentPlayer]} smashed through the wall!`,'success');
+  skipCount[currentPlayer]=0;
+  endTurn();
+}
+
+function doSlay(result) {
+  if (result!==dragon.number) { setMessage(`The dragon laughs! Need ${dragon.number}, not ${result}!`,'error'); return; }
+  if (!canSlayDragon()) { setMessage('Too far from the dragon!','error'); return; }
+
+  gameOver = true;
+  knightPos[currentPlayer] = 36;
+  renderBoard();
+  addHistory(`<span class="p${currentPlayer}c">${NAMES[currentPlayer]}</span> SLEW THE DRAGON!`);
+  document.getElementById('victoryIcon').textContent = '\uD83D\uDC32\u2694\uFE0F';
+  document.getElementById('victoryTitle').textContent = `${NAMES[currentPlayer]} Slays the Dragon!`;
+  document.getElementById('victoryMsg').textContent = `With a mighty equation equaling ${dragon.number}, the beast falls!`;
+  document.getElementById('victoryOverlay').classList.add('show');
+}
+
+// ── Messages & History ───────────────────────────────────
+function setMessage(t, cls) { const e=document.getElementById('message'); e.textContent=t; e.className=`message ${cls||'info'}`; }
+function addHistory(html) { const e=document.createElement('div'); e.className='history-entry'; e.innerHTML=html; document.getElementById('historyLog').prepend(e); }
+
+// ── New Game ─────────────────────────────────────────────
+function newGame() {
+  gameOver=false; currentPlayer=0;
+  knightPos=[0,0]; obstacles.clear(); obsCount=[0,0]; skipCount=[0,0];
+  selectedAction='move'; tokens=[]; diceUsed=[false,false,false]; dice=[0,0,0];
+
+  boardNums = shuffleArray(Array.from({length:36},(_,i)=>i+1));
+  dragon.number = Math.floor(Math.random()*16)+15; // 15-30
+
+  document.getElementById('dragonNumber').textContent = dragon.number;
+  document.getElementById('historyLog').innerHTML = '';
+  document.getElementById('eqResult').textContent = '';
+  document.getElementById('victoryOverlay').classList.remove('show');
+  ['die1','die2','die3'].forEach(id => { const d=document.getElementById(id); d.textContent='?'; d.classList.remove('used','rolling'); });
+
+  renderBoard();
+  renderFreeNums();
+  setMessage('The quest begins! Gold Knight moves first.','info');
+  startTurn();
+}
+
+function goToCalculator() {
+  saveGameState();
+  localStorage.setItem('knightDice', JSON.stringify(dice));
+  window.location.href = 'calculator.html';
+}
+
+function saveGameState() {
+  localStorage.setItem('knightGameState', JSON.stringify({
+    boardNums, knightPos, obsEntries: [...obstacles.entries()], obsCount,
+    dragon, currentPlayer, dice, diceUsed, selectedAction, skipCount,
+    gameOver, history: document.getElementById('historyLog').innerHTML
+  }));
+}
+
+function loadGameState() {
+  try {
+    const s = JSON.parse(localStorage.getItem('knightGameState'));
+    if (!s || !s.boardNums) return false;
+    boardNums = s.boardNums;
+    knightPos = s.knightPos;
+    obstacles = new Map(s.obsEntries);
+    obsCount = s.obsCount;
+    dragon = s.dragon;
+    currentPlayer = s.currentPlayer;
+    dice = s.dice;
+    diceUsed = s.diceUsed;
+    selectedAction = s.selectedAction || 'move';
+    skipCount = s.skipCount;
+    gameOver = s.gameOver;
+    tokens = [];
+
+    document.getElementById('dragonNumber').textContent = dragon.number;
+    document.getElementById('historyLog').innerHTML = s.history || '';
+    document.getElementById('victoryOverlay').classList.remove('show');
+
+    renderBoard();
+    renderFreeNums();
+
+    const dieEls = [document.getElementById('die1'), document.getElementById('die2'), document.getElementById('die3')];
+    dieEls.forEach((d, i) => { d.textContent = dice[i] || '?'; d.classList.remove('used', 'rolling'); });
+    renderDiceTokens();
+    clearEquation();
+
+    const canSlay = canSlayDragon();
+    document.getElementById('slayBtn').disabled = !canSlay;
+    selectAction(selectedAction);
+    setMessage(`${NAMES[currentPlayer]} rolled ${dice.join(', ')} — choose thy action!`, 'info');
+    highlightTargets();
+    localStorage.removeItem('knightGameState');
+    return true;
+  } catch(e) { return false; }
+}
+
+if (!loadGameState()) newGame();
+</script>
+</body>
+</html>

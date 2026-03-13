@@ -1,0 +1,7 @@
+{
+  "name": "number-knockout",
+  "private": true,
+  "scripts": {
+    "dev": "npx serve . -l 3457 --no-clipboard"
+  }
+}
