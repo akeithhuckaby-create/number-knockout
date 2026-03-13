@@ -215,8 +215,9 @@
     <p class="subtitle">See every number thy dice can conjure</p>
   </div>
   <div class="divider">&cross;</div>
-  <div style="text-align:center;margin-bottom:12px;">
+  <div style="text-align:center;margin-bottom:12px; display:flex; justify-content:center; gap:10px; flex-wrap:wrap;">
     <a class="back-link" href="index.html">&larr; Back to Knight's Path</a>
+    <a class="back-link" href="#" onclick="event.preventDefault();shareGame()">&#9993; Share Game</a>
   </div>
 
   <!-- Dice Input -->
@@ -516,6 +517,16 @@ function setFilter(f) {
     b.classList.toggle('active', b.dataset.filter === f)
   );
   renderResults();
+}
+
+const GAME_URL = 'https://akeithhuckaby-create.github.io/number-knockout/';
+function shareGame() {
+  if (navigator.share) {
+    navigator.share({ title: "Knight's Path", text: 'Challenge me in Knight\'s Path — a medieval math duel!', url: GAME_URL }).catch(() => {});
+  } else {
+    window.location.href = 'mailto:?subject=' + encodeURIComponent("Play Knight's Path!") +
+      '&body=' + encodeURIComponent("Challenge me in Knight's Path — a medieval math duel!\n\n" + GAME_URL);
+  }
 }
 
 // Load dice from game if available

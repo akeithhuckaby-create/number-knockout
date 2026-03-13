@@ -517,8 +517,9 @@
 
   <!-- Message -->
   <div class="message info" id="message">Prepare for battle!</div>
-  <div style="text-align:center;margin:8px 0 4px;">
+  <div style="text-align:center;margin:8px 0 4px; display:flex; justify-content:center; gap:10px; flex-wrap:wrap;">
     <button class="calc-nav-btn" onclick="goToCalculator()">&#9876; Go to Calculator</button>
+    <button class="calc-nav-btn" onclick="shareGame()">&#9993; Share Game</button>
   </div>
 
   <div class="game-layout">
@@ -1168,6 +1169,17 @@ function newGame() {
   renderFreeNums();
   setMessage('The quest begins! Gold Knight moves first.','info');
   startTurn();
+}
+
+const GAME_URL = 'https://akeithhuckaby-create.github.io/number-knockout/';
+
+function shareGame() {
+  if (navigator.share) {
+    navigator.share({ title: "Knight's Path", text: 'Challenge me in Knight\'s Path — a medieval math duel!', url: GAME_URL }).catch(() => {});
+  } else {
+    window.location.href = 'mailto:?subject=' + encodeURIComponent("Play Knight's Path!") +
+      '&body=' + encodeURIComponent("Challenge me in Knight's Path — a medieval math duel!\n\n" + GAME_URL);
+  }
 }
 
 function goToCalculator() {
