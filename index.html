@@ -346,21 +346,6 @@
   @keyframes knightLand { 0% { transform:scale(0.5); opacity:0.3; } 50% { transform:scale(1.12); } 100% { transform:scale(1); } }
 
   /* Dice */
-  .dice-section { text-align: center; margin-bottom: 10px; }
-  .dice-row { display: flex; justify-content: center; gap: 12px; margin-bottom: 10px; }
-  .die {
-    width: 52px; height: 52px;
-    background: linear-gradient(145deg, #f5e6c8, #dcc8a0);
-    border: 2px solid var(--gold); border-radius: 10px;
-    display: flex; align-items: center; justify-content: center;
-    font-family: 'Cinzel Decorative', serif; font-size: 1.5rem; font-weight: 900;
-    color: var(--dark);
-    box-shadow: 0 3px 8px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.3);
-    transition: all 0.3s;
-  }
-  .die.rolling { animation: dieRoll 0.4s ease infinite; }
-  .die.used { opacity: 0.35; border-color: var(--steel); transform: scale(0.9); }
-  @keyframes dieRoll { 0%{transform:rotate(0)scale(1)} 25%{transform:rotate(15deg)scale(1.05)} 50%{transform:rotate(-10deg)scale(0.95)} 75%{transform:rotate(5deg)scale(1.02)} 100%{transform:rotate(0)scale(1)} }
 
   /* Action selector */
   .action-selector { display: flex; justify-content: center; gap: 6px; margin-bottom: 10px; flex-wrap: wrap; }
@@ -398,15 +383,15 @@
   .palette-row { display: flex; gap: 4px; flex-wrap: wrap; justify-content: center; }
   .eq-token {
     display: flex; align-items: center; justify-content: center;
-    min-width: 36px; height: 36px; padding: 0 8px; border-radius: 6px;
-    font-family: 'Cinzel', serif; font-size: 1rem; font-weight: 700;
+    min-width: 48px; height: 48px; padding: 0 10px; border-radius: 8px;
+    font-family: 'Cinzel', serif; font-size: 1.25rem; font-weight: 700;
     cursor: pointer; transition: all 0.2s; user-select: none;
   }
-  .eq-token.number { background: linear-gradient(145deg, #f5e6c8, #dcc8a0); color: var(--dark); border: 1px solid var(--gold); }
-  .eq-token.operator { background: linear-gradient(145deg, #2e2e5e, #222248); color: var(--gold-light); border: 1px solid rgba(212,160,23,0.4); font-size: 1.1rem; }
-  .eq-token.paren { background: linear-gradient(145deg, #1e3a1e, #163016); color: #88cc88; border: 1px solid rgba(46,125,50,0.4); font-size: 1.2rem; min-width: 28px; }
-  .eq-token.special { background: linear-gradient(145deg, #3a1e3a, #301630); color: #cc88cc; border: 1px solid rgba(125,46,125,0.4); font-size: 0.8rem; }
-  .eq-token.free-num { background: linear-gradient(145deg, #2a3a2a, #1e2e1e); color: #a8d8a8; border: 1px solid rgba(76,175,80,0.4); font-size: 0.85rem; min-width: 28px; padding: 0 4px; }
+  .eq-token.number { background: linear-gradient(145deg, #f5e6c8, #dcc8a0); color: var(--dark); border: 2px solid var(--gold); font-size: 1.4rem; }
+  .eq-token.operator { background: linear-gradient(145deg, #2e2e5e, #222248); color: var(--gold-light); border: 1px solid rgba(212,160,23,0.4); font-size: 1.3rem; }
+  .eq-token.paren { background: linear-gradient(145deg, #1e3a1e, #163016); color: #88cc88; border: 1px solid rgba(46,125,50,0.4); font-size: 1.4rem; min-width: 36px; }
+  .eq-token.special { background: linear-gradient(145deg, #3a1e3a, #301630); color: #cc88cc; border: 1px solid rgba(125,46,125,0.4); font-size: 1rem; }
+  .eq-token.free-num { background: linear-gradient(145deg, #2a3a2a, #1e2e1e); color: #a8d8a8; border: 1px solid rgba(76,175,80,0.4); font-size: 1.05rem; min-width: 36px; padding: 0 6px; }
   .eq-token:hover { transform: scale(1.1); box-shadow: 0 0 8px rgba(212,160,23,0.3); }
   .free-label { font-family: 'MedievalSharp', cursive; font-size: 0.6rem; color: var(--steel); text-align: center; margin-bottom: 2px; opacity: 0.7; }
 
@@ -478,8 +463,7 @@
   @media (max-width: 500px) {
     .pcell { min-height: 44px; }
     .pcell .cell-num { font-size: 0.8rem; }
-    .die { width: 44px; height: 44px; font-size: 1.2rem; }
-    .eq-token { min-width: 30px; height: 30px; font-size: 0.85rem; }
+    .eq-token { min-width: 38px; height: 38px; font-size: 1rem; }
     .players-bar { flex-direction: column; gap: 6px; }
   }
 </style>
@@ -533,15 +517,6 @@
 
     <!-- RIGHT: Controls -->
     <div class="game-right">
-      <!-- Dice -->
-      <div class="dice-section">
-        <div class="dice-row">
-          <div class="die" id="die1">?</div>
-          <div class="die" id="die2">?</div>
-          <div class="die" id="die3">?</div>
-        </div>
-      </div>
-
       <!-- Action Selector -->
       <div class="action-selector">
         <button class="action-btn-select active" data-action="move">Advance</button>
@@ -935,15 +910,11 @@ function startTurn() {
 }
 
 function rollDice() {
-  const dieEls = [document.getElementById('die1'), document.getElementById('die2'), document.getElementById('die3')];
-  dieEls.forEach(d => { d.classList.add('rolling'); d.classList.remove('used'); });
-
   setTimeout(() => {
     do {
       dice = [1,2,3].map(() => Math.floor(Math.random() * 6) + 1);
     } while (dice[0] === 1 && dice[1] === 1 && dice[2] === 1);
     diceUsed = [false,false,false];
-    dieEls.forEach((d,i) => { d.classList.remove('rolling'); d.textContent = dice[i]; });
     clearEquation();
     renderDiceTokens();
 
@@ -1008,14 +979,21 @@ function renderDiceTokens() {
   });
 }
 function addDie(i) { if (diceUsed[i]) return; diceUsed[i]=true; tokens.push({type:'die',index:i,value:dice[i]}); renderEquation(); renderDiceTokens(); updateDieVisuals(); }
-function addFreeNum(n) { tokens.push({type:'free',value:n}); renderEquation(); }
+function addFreeNum(n) {
+  tokens.push({type:'op',value:'^'});
+  tokens.push({type:'op',value:'('});
+  tokens.push({type:'free',value:n});
+  tokens.push({type:'op',value:')'});
+  renderEquation();
+}
 function renderFreeNums() {
   const r1 = document.getElementById('freeNumRow1'); r1.innerHTML = '';
   const r2 = document.getElementById('freeNumRow2'); r2.innerHTML = '';
   FREE_EXPONENTS.forEach((n, i) => {
     const b = document.createElement('div');
     b.className = 'eq-token free-num';
-    b.textContent = n; b.onclick = () => addFreeNum(n);
+    const sup = '\u2070\u00B9\u00B2\u00B3\u2074\u2075\u2076\u2077\u2078\u2079';
+    b.textContent = 'x' + sup[n]; b.onclick = () => addFreeNum(n);
     (i < 5 ? r1 : r2).appendChild(b);
   });
 }
@@ -1033,7 +1011,7 @@ function clearEquation() {
   document.getElementById('eqResult').className = 'eq-result';
 }
 function updateDieVisuals() {
-  ['die1','die2','die3'].forEach((id,i) => document.getElementById(id).classList.toggle('used', diceUsed[i]));
+  renderDiceTokens();
 }
 function renderEquation() {
   const d = document.getElementById('eqDisplay');
@@ -1163,7 +1141,7 @@ function newGame() {
   document.getElementById('historyLog').innerHTML = '';
   document.getElementById('eqResult').textContent = '';
   document.getElementById('victoryOverlay').classList.remove('show');
-  ['die1','die2','die3'].forEach(id => { const d=document.getElementById(id); d.textContent='?'; d.classList.remove('used','rolling'); });
+  renderDiceTokens();
 
   renderBoard();
   renderFreeNums();
@@ -1220,8 +1198,6 @@ function loadGameState() {
     renderBoard();
     renderFreeNums();
 
-    const dieEls = [document.getElementById('die1'), document.getElementById('die2'), document.getElementById('die3')];
-    dieEls.forEach((d, i) => { d.textContent = dice[i] || '?'; d.classList.remove('used', 'rolling'); });
     renderDiceTokens();
     clearEquation();
 
