@@ -87,6 +87,17 @@ test("only the two connected lair approaches permit a dragon attack", () => {
     assert.ok(!reachable(s).includes(30));
   }
 });
+test("the upper trail follows the full bend instead of jumping straight toward the lair", () => {
+  const s = newGame();
+  s.players[0].pos = 21;
+  s.players[1].pos = 34;
+  assert.ok(!reachable(s).includes(34));
+  assert.ok(!targets(s, "build").some((t) => t.pos === 21));
+  assert.equal(stepsToLair(21), 11);
+  const bend = [21, 24, 25, 26, 27, 28, 29, 32, 33, 34];
+  for (let i = 1; i < bend.length; i++)
+    assert.ok(neighbours(bend[i - 1]).includes(bend[i]));
+});
 test("advanced grid saves stay untouched; only a quest still at the gates migrates", () => {
   const old = { ...newGame({ seed: 42 }), version: 2 };
   delete old.route;

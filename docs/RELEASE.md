@@ -6,6 +6,8 @@ The former grid becomes a winding fantasy trail with 34 live numbered stones, fo
 
 The existing `calculator.html` route remains available. Math validation uses an explicit parser and exact arithmetic; approximate results never qualify a move. Saves use version 3 and protect advanced sessions from the old grid.
 
+The review adjustment removes the upper diagonal connection that bypassed eight moves. Existing trail positions and saved drafts remain compatible. The map is fixed between quests; its numbers are shuffled for a new board.
+
 ## Current publication state
 
 This review was built on `codex/knights-path-redesign` from baseline `c0ddc2f`. It has not been pushed or merged into the publishing branch.

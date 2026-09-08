@@ -23,6 +23,8 @@ The first game starts with Gold. All three rolled dice must be used exactly once
 
 Stones are individually placed on a landscape. A road connects every legal neighboring pair. Outlines mark legal targets; they do not promise a solution for the current dice. Shorter routes and alternate loops offer tactical choices. The dragon has a separate labeled lair.
 
+The route layout stays the same between games. A new quest reshuffles the stone numbers and rolls a dragon target; a same-board rematch preserves those numbers too. The long diagonal shortcut toward the lair has been removed, so every journey follows the full bend around the right side. Smaller forks remain.
+
 On a phone, use Enlarge map to scroll through larger stones, or choose the same legal target from the target list. Selecting a stone carries its number into the turn panel.
 
 Automated checks verify that all stones reach the lair, all road connections are represented in the rules, and roads do not cross or run through unrelated stones. The two gate connections are entry-only.

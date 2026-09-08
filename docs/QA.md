@@ -2,7 +2,7 @@
 
 ## Result
 
-27 automated tests pass. The static release builds successfully. The winding-trail interface was exercised in the Codex in-app browser, including a packaged build served beneath `/number-knockout/`. No blocking game, save, or layout defect was found in this coverage.
+28 automated tests pass. The static release builds successfully. The winding-trail interface was exercised in the Codex in-app browser, including a packaged build served beneath `/number-knockout/`. No blocking game, save, or layout defect was found in this coverage.
 
 ## Automated coverage
 
@@ -12,6 +12,7 @@
 - Three complete reproducible races (seeds 1, 42, and 9182) ending with verified dragon wins and restorable turn states.
 - All 34 trail stones connected to the goal, graph symmetry, two entry stones, fork and occupancy rules, and the two legal lair approaches.
 - No road crossings or roads through unrelated stones.
+- The removed upper shortcut cannot be used for movement or wall placement; the full right-hand bend remains connected.
 - Draft restoration, corrupt saves, failed storage writes, malformed history repair, and preservation of advanced grid saves.
 
 Run `npm test` from the project root.
