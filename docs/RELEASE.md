@@ -6,13 +6,15 @@ The former grid becomes a winding fantasy trail with 34 live numbered stones, fo
 
 The existing `calculator.html` route remains available. Math validation uses an explicit parser and exact arithmetic; approximate results never qualify a move. Saves use version 3 and protect advanced sessions from the old grid.
 
+Knights can now share numbered stones and are displayed side by side. Each moves independently, while opposing walls continue to block entry. Shared positions restore normally after refresh.
+
 The review adjustment removes the upper diagonal connection that bypassed eight moves. Existing trail positions and saved drafts remain compatible. The map is fixed between quests; its numbers are shuffled for a new board.
 
-## Current publication state
+## Publication configuration
 
-This review was built on `codex/knights-path-redesign` from baseline `c0ddc2f`. It has not been pushed or merged into the publishing branch.
+This release was built on `codex/knights-path-redesign` from baseline `c0ddc2fb7eb94d255e299c7e2af8f1afbbb734f9`. Publication was authorized after the shortcut and shared-stone revisions. Keep that baseline as the pre-redesign rollback reference.
 
-The existing GitHub Pages configuration was inspected: legacy branch publishing from `main`, folder `/`, for `akeithhuckaby-create/number-knockout`. The intended public address remains `https://akeithhuckaby-create.github.io/number-knockout/`. The existing public site remains unchanged until release approval.
+The existing GitHub Pages configuration was inspected: legacy branch publishing from `main`, folder `/`, for `akeithhuckaby-create/number-knockout`. The intended public address remains `https://akeithhuckaby-create.github.io/number-knockout/`. GitHub Pages deployment history identifies the currently served revision.
 
 ## Release after approval
 
@@ -20,7 +22,7 @@ The existing GitHub Pages configuration was inspected: legacy branch publishing 
 2. Review and integrate the tested redesign branch while preserving unrelated changes. Record the full pre-release `main` commit as the rollback reference.
 3. Run the automated tests and build. Review the generated `dist/` site under `/number-knockout/`.
 4. Merge or commit the approved root files to the configured publishing branch, then push through the existing GitHub Pages mechanism. The root is already publishable; do not change Pages to `dist/` or add another hosting service.
-5. Wait for the deployment, then check the actual HTTPS website: artwork, calculator route, Oracle worker, tutorial, a move, a dragon encounter, refresh/resume, and phone layout. This hosted check has not yet been performed for this release.
+5. Wait for the deployment, then check the actual HTTPS website: artwork, calculator route, Oracle worker, tutorial, a move, a dragon encounter, refresh/resume, and phone layout. Record the hosted result with the deployed revision after publication.
 
 ## Rollback
 

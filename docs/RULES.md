@@ -4,24 +4,26 @@ This is the approved replacement for the earlier rectangular board. It changes m
 
 ## Adventure rules
 
-| Action or condition | Rule                                                                                                                                                                                               |
-| ------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Board               | 34 different numbers selected from 1–36. The dragon has its own target, from 15–30. A stone may share the dragon's target number.                                                                  |
-| Start               | Both knights wait at the gates. Either may enter an open one of the two connected stones.                                                                                                          |
-| Move                | Make a stone's number and move one visible connection. You may move backward or choose a fork. You cannot jump a gap, return to the gates, enter your opponent's stone, or enter an opposing wall. |
-| Build               | Make the number of an empty stone connected to the opposing knight. You may have at most three walls active. No building on a knight, existing wall, or dragon.                                    |
-| Own walls           | You can enter your own wall's stone.                                                                                                                                                               |
-| Break               | Make twice an opposing wall's number, from anywhere. The action removes the wall without moving you, and restores the owner's wall supply.                                                         |
-| Dragon              | Reach one of the two stones connected directly to the lair. Choose Slay dragon and make its number to win.                                                                                         |
-| Turn                | One successful action or a pass. An invalid expression does not spend your turn.                                                                                                                   |
-| Draw                | Both players have passed on their last three personal turns. A successful action resets that player's pass counter.                                                                                |
-| Rematch             | Keep the same numbered board or generate a new one. The first player alternates. Dice are freshly rolled.                                                                                          |
+| Action or condition | Rule                                                                                                                                                                                                 |
+| ------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Board               | 34 different numbers selected from 1–36. The dragon has its own target, from 15–30. A stone may share the dragon's target number.                                                                    |
+| Start               | Both knights wait at the gates. Either may enter an open one of the two connected stones.                                                                                                            |
+| Move                | Make a stone's number and move one visible connection. You may move backward or choose a fork. You cannot jump a gap, return to the gates or enter an opposing wall. Both knights may share a stone. |
+| Build               | Make the number of an empty stone connected to the opposing knight. You may have at most three walls active. No building on a knight, existing wall, or dragon.                                      |
+| Own walls           | You can enter your own wall's stone.                                                                                                                                                                 |
+| Break               | Make twice an opposing wall's number, from anywhere. The action removes the wall without moving you, and restores the owner's wall supply.                                                           |
+| Dragon              | Reach one of the two stones connected directly to the lair. Choose Slay dragon and make its number to win.                                                                                           |
+| Turn                | One successful action or a pass. An invalid expression does not spend your turn.                                                                                                                     |
+| Draw                | Both players have passed on their last three personal turns. A successful action resets that player's pass counter.                                                                                  |
+| Rematch             | Keep the same numbered board or generate a new one. The first player alternates. Dice are freshly rolled.                                                                                            |
 
 The first game starts with Gold. All three rolled dice must be used exactly once in an expression; free powers do not consume a die. Rolls with two or more ones are rerolled. The result must match exactly. See [Math](MATH.md) for grammar and computation limits.
 
 ## Reading the map
 
 Stones are individually placed on a landscape. A road connects every legal neighboring pair. Outlines mark legal targets; they do not promise a solution for the current dice. Shorter routes and alternate loops offer tactical choices. The dragon has a separate labeled lair.
+
+Both knights can occupy the same numbered stone, shown side by side. Each moves independently on their own turn. Opposing walls still prevent entry, and no wall may be built on a stone occupied by either knight. Sharing a lair approach does not share victory: the first successful attack wins.
 
 The route layout stays the same between games. A new quest reshuffles the stone numbers and rolls a dragon target; a same-board rematch preserves those numbers too. The long diagonal shortcut toward the lair has been removed, so every journey follows the full bend around the right side. Smaller forks remain.
 

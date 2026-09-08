@@ -74,7 +74,7 @@ export function reachable(s, player = s.current) {
   const pos = s.players[player].pos,
     opp = 1 - player;
   return (pos ? neighbours(pos) : ENTRY_POSITIONS).filter(
-    (p) => POSITIONS.has(p) && p !== s.players[opp].pos && s.walls[p] !== opp,
+    (p) => POSITIONS.has(p) && s.walls[p] !== opp,
   );
 }
 export function canSlay(s) {
@@ -227,8 +227,6 @@ export function validateSave(raw) {
           (p.pos === 0 || POSITIONS.has(p.pos)),
       )
     )
-      return null;
-    if (raw.players[0].pos > 0 && raw.players[0].pos === raw.players[1].pos)
       return null;
     if (
       !Array.isArray(raw.dice) ||

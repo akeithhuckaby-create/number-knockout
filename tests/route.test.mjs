@@ -61,7 +61,7 @@ test("trail lines never cross or pass through an unrelated stone", () => {
     }
   }
 });
-test("fork movement follows edges and respects occupancy and wall ownership", () => {
+test("fork movement allows shared stones and respects wall ownership", () => {
   const s = newGame();
   assert.deepEqual(reachable(s), [1, 2]);
   s.players[0].pos = 14;
@@ -72,7 +72,7 @@ test("fork movement follows edges and respects occupancy and wall ownership", ()
   );
   s.players[1].pos = 13;
   s.walls = { 15: 1, 22: 0 };
-  assert.deepEqual(reachable(s), [22]);
+  assert.deepEqual(reachable(s), [13, 22]);
   s.players[1].pos = 3;
   assert.deepEqual(
     new Set(targets(s, "build").map((t) => t.pos)),

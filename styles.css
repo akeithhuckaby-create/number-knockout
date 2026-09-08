@@ -1938,7 +1938,7 @@ dialog > p {
     transform: scale(1);
   }
 }
-.just-move .piece {
+.just-move .piece.arriving {
   animation: piece-arrive 0.45s ease-out;
 }
 .just-build .player-wall {
@@ -3565,4 +3565,31 @@ html[data-contrast="high"] .trail-stones {
 }
 html[data-contrast="high"] .trail-legend {
   color: #e6edf7;
+}
+
+/* Shared stones keep both champions and their target number visible. */
+.route-stone.shared .piece {
+  width: 70%;
+  height: 145%;
+  bottom: 23%;
+}
+.route-stone.shared .piece.gold {
+  left: -18%;
+}
+.route-stone.shared .piece.blue {
+  left: 48%;
+}
+.route-stone.shared .piece > span {
+  left: 38%;
+}
+.route-stone.shared .tile-number {
+  left: 50%;
+  right: auto;
+  top: auto;
+  bottom: -3%;
+  transform: translateX(-50%) rotate(calc(-1 * var(--tilt)));
+  padding: 1px 4px;
+  border-radius: 5px;
+  background: #142030e8;
+  z-index: 5;
 }

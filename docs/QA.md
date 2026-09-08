@@ -2,7 +2,7 @@
 
 ## Result
 
-28 automated tests pass. The static release builds successfully. The winding-trail interface was exercised in the Codex in-app browser, including a packaged build served beneath `/number-knockout/`. No blocking game, save, or layout defect was found in this coverage.
+31 automated tests pass. The static release builds successfully. The winding-trail interface was exercised in the Codex in-app browser, including a packaged build served beneath `/number-knockout/`. No blocking game, save, or layout defect was found in this coverage.
 
 ## Automated coverage
 
@@ -10,9 +10,10 @@
 - Every tested Oracle answer rechecked by the exact evaluator; duplicate-die identity remapping and search-range limits.
 - Atomic turn commits, restored handoffs, wall ownership and breaking, six-turn draws, and dragon victory.
 - Three complete reproducible races (seeds 1, 42, and 9182) ending with verified dragon wins and restorable turn states.
-- All 34 trail stones connected to the goal, graph symmetry, two entry stones, fork and occupancy rules, and the two legal lair approaches.
+- All 34 trail stones connected to the goal, graph symmetry, two entry stones, fork and wall rules, and the two legal lair approaches.
 - No road crossings or roads through unrelated stones.
 - The removed upper shortcut cannot be used for movement or wall placement; the full right-hand bend remains connected.
+- Shared-stone arrival for either knight, refresh/restoration together, independent departure, wall restrictions, and a single winner from a shared lair approach.
 - Draft restoration, corrupt saves, failed storage writes, malformed history repair, and preservation of advanced grid saves.
 
 Run `npm test` from the project root.
@@ -27,6 +28,7 @@ The revised trail was tested with:
 - An advanced legacy save's recovery notice, temporary play, and refresh showing that the old session stayed protected.
 - Small-screen overview, enlarged stones (approximately 59 × 50 CSS pixels at 390px width), target selection, preserved map scroll, and keyboard horizontal panning.
 - Packaged artwork, a tutorial move, increased map contrast, reduced motion, and a verified practice result at the retained `calculator.html` route.
+- Gold joining Blue, Blue joining Gold, refreshing while sharing, and a knight leaving independently; both figures and the stone number remained visible on the enlarged phone map.
 - No console errors or warnings in the observed flows.
 
 The preceding build checks also covered manual token replacement, custom fractional powers and undo, keyboard arithmetic, all three hints, practice isolation, draft persistence on refresh, pass/draw, same-board rematch and alternating starter, save recovery, and preference persistence. The final automated suite reruns the shared engine coverage against the trail release.
@@ -50,7 +52,7 @@ Actual application screenshots are included in the local review folder: desktop,
 ## Limits and release checks
 
 - This is browser viewport testing, not physical iPhone/iPad/Android testing. Safari, Firefox, screen readers, text-only zoom, and actual speaker playback were not independently verified. The 720px check is not a claim of native browser text-zoom coverage.
-- The final release has not yet been tested on the public HTTPS GitHub Pages site. Complete that smoke test after publication approval.
+- Run the public HTTPS GitHub Pages smoke test after deployment and record the served revision. The local release report records that result separately from these pre-deployment checks.
 - The Oracle is bounded and does not prove a number impossible. A legal action is not guaranteed for every roll.
 - Human playtesting is still needed for route balance, session length, first-player advantage, and wall bottlenecks.
 - Saves are local to a browser/origin. Advanced old-grid quests cannot resume on the new trail; their original data is preserved with explicit recovery choices.
