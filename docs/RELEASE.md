@@ -8,6 +8,8 @@ The existing `calculator.html` route remains available. Math validation uses an 
 
 Knights can now share numbered stones and are displayed side by side. Each moves independently, while opposing walls continue to block entry. Shared positions restore normally after refresh.
 
+The shared-stone follow-up requires distinct calculation methods when following an opponent to the same destination. Equivalent rearrangements are rejected without spending a turn. If the completed Oracle preset search finds no alternative, a valid repeat is automatically allowed; the UI explains the search scope and the chronicle records the exception. Existing version-3 saves remain compatible. Revision `85458fbad02981534fa5798895961a485aaf63e4` is the immediately preceding published shared-stone version.
+
 The review adjustment removes the upper diagonal connection that bypassed eight moves. Existing trail positions and saved drafts remain compatible. The map is fixed between quests; its numbers are shuffled for a new board.
 
 ## Publication configuration
@@ -16,7 +18,7 @@ This release was built on `codex/knights-path-redesign` from baseline `c0ddc2fb7
 
 The existing GitHub Pages configuration was inspected: legacy branch publishing from `main`, folder `/`, for `akeithhuckaby-create/number-knockout`. The intended public address remains `https://akeithhuckaby-create.github.io/number-knockout/`. GitHub Pages deployment history identifies the currently served revision.
 
-## Release after approval
+## Authorized release procedure
 
 1. Recheck the repository's current Pages source and any newer changes on `main`.
 2. Review and integrate the tested redesign branch while preserving unrelated changes. Record the full pre-release `main` commit as the rollback reference.

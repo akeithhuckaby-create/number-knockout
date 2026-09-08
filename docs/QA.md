@@ -2,7 +2,7 @@
 
 ## Result
 
-31 automated tests pass. The static release builds successfully. The winding-trail interface was exercised in the Codex in-app browser, including a packaged build served beneath `/number-knockout/`. No blocking game, save, or layout defect was found in this coverage.
+39 automated tests pass. The static release builds successfully. The winding-trail interface was exercised in the Codex in-app browser, including a packaged build served beneath `/number-knockout/`. No blocking game, save, or layout defect was found in this coverage.
 
 ## Automated coverage
 
@@ -14,6 +14,7 @@
 - No road crossings or roads through unrelated stones.
 - The removed upper shortcut cannot be used for movement or wall placement; the full right-hand bend remains connected.
 - Shared-stone arrival for either knight, refresh/restoration together, independent departure, wall restrictions, and a single winner from a shared lair approach.
+- Reordered/shared-stone equation rejection, allowed alternatives, persistent reminders, Oracle exclusion caching, and the one-method exception with dice 1, 2, 2 and target 21. Stale, absent, failed, and alternative-found checks cannot unlock copying.
 - Draft restoration, corrupt saves, failed storage writes, malformed history repair, and preservation of advanced grid saves.
 
 Run `npm test` from the project root.
@@ -29,6 +30,8 @@ The revised trail was tested with:
 - Small-screen overview, enlarged stones (approximately 59 × 50 CSS pixels at 390px width), target selection, preserved map scroll, and keyboard horizontal panning.
 - Packaged artwork, a tutorial move, increased map contrast, reduced motion, and a verified practice result at the retained `calculator.html` route.
 - Gold joining Blue, Blue joining Gold, refreshing while sharing, and a knight leaving independently; both figures and the stone number remained visible on the enlarged phone map.
+- Reordered `3 + 2 + 1` rejected without spending the turn; Oracle provided `1 × 2 × 3`, which moved the knight onto the shared destination.
+- With hints disabled, `1 + 2² + 2⁴ = 21` received the automatic one-method exception. Refresh performed the check again, the move succeeded, and the exception appeared in the Battle Chronicle. The phone layout at 390px had no page overflow.
 - No console errors or warnings in the observed flows.
 
 The preceding build checks also covered manual token replacement, custom fractional powers and undo, keyboard arithmetic, all three hints, practice isolation, draft persistence on refresh, pass/draw, same-board rematch and alternating starter, save recovery, and preference persistence. The final automated suite reruns the shared engine coverage against the trail release.

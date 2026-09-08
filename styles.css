@@ -3593,3 +3593,21 @@ html[data-contrast="high"] .trail-legend {
   background: #142030e8;
   z-index: 5;
 }
+
+.shared-exit-note {
+  padding: 12px 14px;
+  margin: 12px 0;
+  border: 1px solid #c8aa6d80;
+  border-radius: 8px;
+  background: #a17d2419;
+  font-size: 12px;
+  line-height: 1.6;
+}
+.shared-exit-note strong {
+  color: #ffdf9c;
+  font-size: 14px;
+}
+.shared-exit-note p {
+  margin: 5px 0 0;
+  color: #e7dfcf;
+}

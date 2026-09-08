@@ -9,8 +9,10 @@ import {
   commitAction,
   finishTurn,
   validateSave,
+  departureRule,
 } from "../src/game.js";
 import { solve } from "../src/solver.js";
+import { equationKey } from "../src/equations.js";
 const distances = new Map(DRAGON.map((p) => [p, 0])),
   queue = [...DRAGON];
 for (const p of queue)
@@ -29,11 +31,19 @@ test("three complete seeded races finish with verified dragon wins and restorabl
       const target = targets(s)
         .filter((t) => byTarget.has(t.required))
         .sort((a, b) => distances.get(a.pos) - distances.get(b.pos))[0];
+      let solution = target && byTarget.get(target.required);
       if (target) {
+        const rule = departureRule(s, target.pos);
+        if (rule)
+          solution = solve(s.dice, {
+            min: target.required,
+            max: target.required,
+            exclude: [equationKey(rule.tokens)],
+          })[0];
         s.draft.target = target.pos;
-        s.draft.tokens = byTarget.get(target.required).tokens;
+        s.draft.tokens = solution?.tokens || [];
       }
-      const result = commitAction(s, { pass: !target });
+      const result = commitAction(s, { pass: !solution });
       assert.ok(result.ok);
       s = result.state;
       assert.ok(validateSave(s), `turn ${s.turn} restores`);

@@ -25,9 +25,15 @@ These are implementation choices, not claimed official competition ceilings.
 
 ## Oracle
 
-A worker searches permutations of all three dice, the four binary operations, both parenthesizations, and the powers 1, 0, 2, 3, 1/2, −1, 4, 1/3, 3/2, 5, and 6. It prefers simpler expressions and keeps one verified answer per target. Equivalent dice multisets share a cache, with die identities correctly remapped.
+A worker searches permutations of all three dice, the four binary operations, both parenthesizations, and the powers 1, 0, 2, 3, 1/2, −1, 4, 1/3, 3/2, 5, and 6. It prefers simpler expressions and keeps one verified answer per target. Equivalent dice multisets share a cache, with die identities correctly remapped. Shared-stone searches exclude the previous method, and the excluded method is part of the cache key. Both a simplified expression and its meaningful grouped form are checked before choosing an alternative.
 
 The in-game range is 1–72, covering ordinary board targets, dragon targets, and twice a wall’s number. Practice supports up to 200 targets between 1 and 999 per search. Search is bounded and does not prove impossibility. The UI says “No solution found in this search.”
+
+## Shared-stone comparison and exception
+
+`src/equations.js` canonicalizes expression structure rather than the numerical answer. It normalizes die identity, order and associative grouping, signed sums, numerator/denominator ordering, redundant unary signs, reduced powers, and powers of 1. It does not cancel terms or replace expressions with their evaluated answer: `6 − 6 + 4` and `6 ÷ 6 × 4` remain different methods.
+
+For the automatic one-method exception, the Oracle must finish the preset search without finding any distinct method, and the previous equation must still be valid for the current dice and target. This is a gameplay decision based on the bounded search, not a mathematical proof that no custom exponent can work. The interface explains that scope. A failed or timed-out search cannot authorize a repeat. The allowance is bound to the game, player, turn, roll, origin, destination, and previous method, and is not restored from storage.
 
 ## Regression examples
 

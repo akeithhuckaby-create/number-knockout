@@ -25,6 +25,12 @@ Stones are individually placed on a landscape. A road connects every legal neigh
 
 Both knights can occupy the same numbered stone, shown side by side. Each moves independently on their own turn. Opposing walls still prevent entry, and no wall may be built on a stone occupied by either knight. Sharing a lair approach does not share victory: the first successful attack wins.
 
+When one knight leaves a shared numbered stone, the knight who remains must use a different calculation to follow to the same destination. For example, after `1 + 2 + 3 = 6`, `1 × 2 × 3 = 6` is allowed, but `3 + 2 + 1 = 6` is a repeat. Swapping identical dice, redundant parentheses, equivalent addition/subtraction or multiplication/division regrouping, and changing a power on the number 1 do not create a new method. Different operations, powers that change a die’s value, or meaningful grouping can.
+
+The reminder persists through passes and wall actions until the remaining knight leaves the original stone. Other destinations are unrestricted. The gates do not count as a shared stone. A rejected repeat does not spend a turn.
+
+**One-method exception:** a repeated valid equation triggers an automatic Oracle search for a different method using the current roll and target. If the completed search finds none, the repeat is allowed and recorded in the Battle Chronicle. This works with hints disabled and does not reveal an alternative unless the player asks for a clue. Reordering the same equation is excluded from the search. The search uses the preset powers described in [Math](MATH.md); it does not prove uniqueness across all custom powers. Errors and timeouts do not allow a repeat. Refresh repeats the check rather than trusting a saved allowance.
+
 The route layout stays the same between games. A new quest reshuffles the stone numbers and rolls a dragon target; a same-board rematch preserves those numbers too. The long diagonal shortcut toward the lair has been removed, so every journey follows the full bend around the right side. Smaller forks remain.
 
 On a phone, use Enlarge map to scroll through larger stones, or choose the same legal target from the target list. Selecting a stone carries its number into the turn panel.

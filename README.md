@@ -20,13 +20,14 @@ The preview runs at `http://127.0.0.1:3457/number-knockout/`. The original `calc
 KNIGHTS_PORT=3458 node scripts/dev.mjs --dist
 ```
 
-The repository root is also directly publishable through the existing GitHub Pages setup. Publishing requires the separate release decision described in [Release notes](docs/RELEASE.md).
+The repository root is also directly publishable through the existing GitHub Pages setup. See [Release notes](docs/RELEASE.md) for the authorized publication procedure and rollback references.
 
 ## Included
 
 - 34 individually numbered stones on a winding, branching trail with two approaches to the lair.
 - Exact arithmetic, separate identities for duplicate dice, free powers and roots, a token editor, undo, and keyboard controls.
 - Move, build, break, pass, dragon victory, draw, and alternating-first-player rematches.
+- Shared stones, distinct calculations when following another knight, and an automatic exception when the Oracle finds no different method.
 - Five guided lessons, three-stage Oracle hints, and independent practice dice.
 - Browser autosave, validated restoration, old-save protection, sound, increased contrast, and reduced motion.
 - An enlargable map and a native target selector for smaller screens.

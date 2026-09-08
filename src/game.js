@@ -1,4 +1,5 @@
 import { evaluate, expressionText, validTokenShape } from "./math.js";
+import { equationKey } from "./equations.js";
 import {
   ROUTE_ID,
   DRAGON_POS,
@@ -59,6 +60,7 @@ export function newGame({
     history: [],
     hints,
     hintsUsed: [0, 0],
+    sharedExit: [null, null],
     draft: { tokens: [], action: "move", target: null, cursor: 0 },
   };
   for (let i = 35; i > 0; i--) {
@@ -122,7 +124,7 @@ export function actionReason(s, action) {
     return "Follow the trail to a stone connected to the dragon.";
   return "No connected stones are open. Break a wall or pass.";
 }
-export function previewAction(s) {
+export function previewAction(s, { departureCheck = null } = {}) {
   if (s.phase !== "input")
     return {
       ok: false,
@@ -147,6 +149,28 @@ export function previewAction(s) {
       math,
       message: `No legal ${s.draft.action === "move" ? "destination" : "target"} matches ${math.display}.`,
     };
+  const rule = departureRule(s, target.pos);
+  if (rule && equationKey(s.draft.tokens) === equationKey(rule.tokens)) {
+    if (
+      departureCheck?.key === departureCheckKey(s, target.pos) &&
+      departureCheck.status === "only-method"
+    )
+      return {
+        ok: true,
+        math,
+        target,
+        code: "only-method",
+        message:
+          "Repeat allowed — the Oracle found no different method for these dice and this target.",
+      };
+    return {
+      ok: false,
+      math,
+      target,
+      code: "repeated-method",
+      message: `${s.players[rule.by].name} already used that method to reach ${target.number}. Use different operations, powers, or meaningful grouping. Reordering does not count.`,
+    };
+  }
   return {
     ok: true,
     math,
@@ -157,10 +181,37 @@ export function previewAction(s) {
         : `Ready — ${math.display} is an exact match.`,
   };
 }
-export function commitAction(state, { pass = false } = {}) {
+export function departureRule(s, target = s.draft.target) {
+  const rule = s.sharedExit?.[s.current];
+  return s.draft.action === "move" &&
+    rule?.from === s.players[s.current].pos &&
+    (target == null || rule.to === target)
+    ? rule
+    : null;
+}
+// A search result applies to this exact turn, roll, shared origin, and destination.
+// It is kept outside saved state so refresh always performs a fresh check.
+export function departureCheckKey(s, target = s.draft.target) {
+  const rule = departureRule(s, target);
+  return rule
+    ? JSON.stringify([
+        s.id,
+        s.turn,
+        s.current,
+        rule.from,
+        rule.to,
+        s.dice,
+        equationKey(rule.tokens),
+      ])
+    : null;
+}
+export function commitAction(
+  state,
+  { pass = false, departureCheck = null } = {},
+) {
   if (state.phase !== "input")
     return { ok: false, state, message: "Wait for the next turn." };
-  const preview = pass ? null : previewAction(state);
+  const preview = pass ? null : previewAction(state, { departureCheck });
   if (!pass && !preview.ok)
     return { ok: false, state, message: preview.message };
   const s = structuredClone(state),
@@ -176,10 +227,26 @@ export function commitAction(state, { pass = false } = {}) {
     value: preview?.math.integer ?? null,
     target: preview?.target.pos ?? null,
     number: preview?.target.number ?? null,
+    ...(preview?.code === "only-method"
+      ? { exception: "oracle-only-method" }
+      : {}),
   };
   if (pass) s.passes[player]++;
   else s.passes[player] = 0;
-  if (action === "move") s.players[player].pos = preview.target.pos;
+  if (action === "move") {
+    const from = s.players[player].pos;
+    s.sharedExit ??= [null, null];
+    s.sharedExit[player] = null;
+    if (from > 0 && s.players[1 - player].pos === from)
+      s.sharedExit[1 - player] = {
+        from,
+        to: preview.target.pos,
+        by: player,
+        dice: [...s.dice],
+        tokens: structuredClone(s.draft.tokens),
+      };
+    s.players[player].pos = preview.target.pos;
+  }
   if (action === "build") s.walls[preview.target.pos] = player;
   if (action === "break") delete s.walls[preview.target.pos];
   if (action === "slay") {
@@ -276,6 +343,30 @@ export function validateSave(raw) {
     if (raw.players.some((p, i) => p.pos && raw.walls[p.pos] === 1 - i))
       return null;
     const s = structuredClone(raw);
+    if (s.sharedExit === undefined) s.sharedExit = [null, null];
+    if (!Array.isArray(s.sharedExit) || s.sharedExit.length !== 2) return null;
+    for (const [player, rule] of s.sharedExit.entries()) {
+      if (rule === null) continue;
+      if (
+        !rule ||
+        !POSITIONS.has(rule.from) ||
+        s.players[player].pos !== rule.from ||
+        !POSITIONS.has(rule.to) ||
+        !neighbours(rule.from).includes(rule.to) ||
+        rule.by !== 1 - player ||
+        !Array.isArray(rule.dice) ||
+        rule.dice.length !== 3 ||
+        !rule.dice.every((n) => Number.isInteger(n) && n >= 1 && n <= 6) ||
+        rule.dice.filter((n) => n === 1).length >= 2 ||
+        !Array.isArray(rule.tokens) ||
+        rule.tokens.length > 64 ||
+        !rule.tokens.every(validTokenShape)
+      )
+        return null;
+      const proof = evaluate(rule.tokens, rule.dice);
+      if (!proof.ok || proof.integer !== s.board[rule.to - 1]) return null;
+      equationKey(rule.tokens);
+    }
     s.players.forEach((p) => (p.name = p.name.slice(0, 28)));
     s.history = s.history.filter(
       (e) =>

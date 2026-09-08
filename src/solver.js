@@ -1,4 +1,5 @@
 import { dieToken, opToken, evaluate, expressionText } from "./math.js";
+import { equationKey } from "./equations.js";
 export const SEARCH_POWERS = [
   "1",
   "0",
@@ -38,7 +39,14 @@ const powerValue = (d, p) => {
   return d ** (a / b);
 };
 const cache = new Map();
-export function solve(dice, { min = 1, max = 72 } = {}) {
+export function solve(dice, { min = 1, max = 72, exclude = [] } = {}) {
+  if (
+    !Array.isArray(exclude) ||
+    exclude.length > 8 ||
+    exclude.some((k) => typeof k !== "string" || k.length > 4000)
+  )
+    throw Error("Invalid previous equation.");
+  const excluded = new Set(exclude);
   if (
     dice.length !== 3 ||
     dice.some((n) => !Number.isInteger(n) || n < 1 || n > 6)
@@ -55,7 +63,7 @@ export function solve(dice, { min = 1, max = 72 } = {}) {
     throw Error("Choose a range of up to 200 targets between 1 and 999.");
   const order = [0, 1, 2].sort((a, b) => dice[a] - dice[b] || a - b),
     sorted = order.map((i) => dice[i]),
-    key = `${sorted}|${min}:${max}`;
+    key = `${sorted}|${min}:${max}|${JSON.stringify([...excluded].sort())}`;
   if (cache.has(key)) return remap(cache.get(key), order);
   const best = new Map(),
     values = sorted.map((d) => SEARCH_POWERS.map((p) => powerValue(d, p)));
@@ -113,8 +121,14 @@ export function solve(dice, { min = 1, max = 72 } = {}) {
                   opToken(OPS[y]),
                   ds[2],
                 ];
-                const tokens =
-                  evaluate(flat, sorted).integer === target ? flat : raw;
+                const variants =
+                  evaluate(flat, sorted).integer === target
+                    ? [flat, raw]
+                    : [raw];
+                const tokens = variants.find(
+                  (t) => !excluded.size || !excluded.has(equationKey(t)),
+                );
+                if (!tokens) continue;
                 best.set(target, {
                   target,
                   cost,
@@ -135,6 +149,31 @@ function remap(result, order) {
       t.kind === "die" ? { ...t, id: order[t.id] } : { ...t },
     ),
   }));
+}
+// A gameplay exception based on the complete preset search, not a proof of
+// uniqueness across every custom exponent supported by the expression editor.
+export function assessDeparture(dice, target, previous) {
+  const key = equationKey(previous);
+  const alternative = solve(dice, {
+    min: target,
+    max: target,
+    exclude: [key],
+  })[0];
+  if (alternative) return { status: "alternative", solution: alternative };
+  const used = new Set();
+  const tokens = previous.map((t) => {
+    if (t.kind !== "die") return { ...t };
+    const id = dice.findIndex((value, i) => value === t.value && !used.has(i));
+    used.add(id);
+    return { ...t, id };
+  });
+  const proof = evaluate(tokens, dice);
+  if (!proof.ok || proof.integer !== target)
+    return { status: "unavailable", solution: null };
+  return {
+    status: "only-method",
+    solution: { target, tokens, expression: expressionText(tokens) },
+  };
 }
 export function clue(solution, level = 1) {
   if (!solution)
