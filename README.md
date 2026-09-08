@@ -1,6 +1,6 @@
 # Knight’s Path
 
-A two-player math adventure played together on one device. Use three dice to make exact numbers, follow a branching trail, place and break walls, and race to the dragon.
+A math adventure for one or two players. Challenge a computer opponent or play with a friend on one device. Use three dice to make exact numbers, follow a branching trail, place and break walls, and race to the dragon.
 
 ## Run and verify
 
@@ -24,6 +24,8 @@ The repository root is also directly publishable through the existing GitHub Pag
 
 ## Included
 
+- One-player mode: you control Gold and the computer controls Blue. Choose Squire for a friendly race or Knight for tactical wall placement.
+
 - 34 individually numbered stones on a winding, branching trail with two approaches to the lair.
 - Exact arithmetic, separate identities for duplicate dice, free powers and roots, a token editor, undo, and keyboard controls.
 - Move, build, break, pass, dragon victory, draw, and alternating-first-player rematches.
@@ -32,7 +34,7 @@ The repository root is also directly publishable through the existing GitHub Pag
 - Browser autosave, validated restoration, old-save protection, sound, increased contrast, and reduced motion.
 - An enlargable map and a native target selector for smaller screens.
 
-There are no accounts, cloud saves, analytics, runtime dependencies, external fonts, online matchmaking, or service worker. Sharing opens the game for a new same-device session. Saves belong to the browser and website origin where the game was played.
+There are no accounts, cloud saves, analytics, runtime dependencies, external fonts, online matchmaking, or service worker. Sharing opens the game for a new solo or same-device session. Saves belong to the browser and website origin where the game was played.
 
 ## Design and rules
 

@@ -2,6 +2,8 @@
 
 ## What changes
 
+One-player mode adds a Blue computer opponent with Squire and Knight styles. Its turns use the same exact evaluator and shared-stone rules, show the chosen equation, pause while menus or practice are open, and resume safely after refresh. Existing two-player saves remain compatible. The immediately preceding published revision is `8b610aaf9f38a8c57404e5037a2f62a24dedc1c0`.
+
 The former grid becomes a winding fantasy trail with 34 live numbered stones, forks, separate knights, and a dragon's lair. Legal movement and wall placement now follow the visible road connections. The interface adds a focused turn panel, exact expression feedback, a guided tutorial, progressive Oracle help, practice, reliable saving, and phone map enlargement.
 
 The existing `calculator.html` route remains available. Math validation uses an explicit parser and exact arithmetic; approximate results never qualify a move. Saves use version 3 and protect advanced sessions from the old grid.

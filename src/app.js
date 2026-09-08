@@ -9,6 +9,7 @@ import {
   departureCheckKey,
   commitAction,
   finishTurn,
+  isComputerPlayer,
 } from "./game.js";
 import { dieToken, opToken, evaluate, expressionText } from "./math.js";
 import {
@@ -25,6 +26,7 @@ import {
   SAVE_KEY,
 } from "./storage.js";
 import { clue } from "./solver.js";
+import { createComputerTurnRunner } from "./computer-turn.js";
 import { playSound } from "./sound.js";
 import {
   ROUTE_NODES,
@@ -34,6 +36,8 @@ import {
   edgePath,
 } from "./route.js";
 let mapExpanded = false;
+let computerRunner = null;
+let computerView = { status: "idle", plan: null, error: "" };
 const $ = (s) => document.querySelector(s),
   esc = (s) =>
     String(s ?? "").replace(
@@ -132,8 +136,13 @@ function avatar(player, extra = "") {
 function header() {
   return `<header class="masthead"><a class="brand" href="./" data-do="home" aria-label="Knight’s Path home"><img class="crest" src="./assets/crest.jpg" alt=""><span><span class="game-title">Knight’s Path</span><span class="tagline">A little strategy. A little courage. A lot of possibility.</span></span></a><nav aria-label="Game menu"><button class="icon-button" data-do="rules" aria-label="Help" title="How to play"><span aria-hidden="true">?</span><span class="nav-label">Help</span></button><button class="icon-button" data-do="sound" aria-label="${settings.sound ? "Mute sound" : "Enable sound"}" aria-pressed="${settings.sound}" title="${settings.sound ? "Mute" : "Enable"} sound"><span aria-hidden="true">${settings.sound ? "♪" : "♩"}</span><span class="nav-label">${settings.sound ? "Sound on" : "Sound off"}</span></button><button class="icon-button" data-do="menu" aria-label="Menu"><span aria-hidden="true">☰</span><span class="nav-label">Menu</span></button></nav></header>`;
 }
+const computerLevel = () =>
+  state.difficulty === "squire" ? "Squire" : "Knight";
+function humanTurn() {
+  return state.phase === "input" && !isComputerPlayer(state);
+}
 function playerStrip() {
-  return `<section class="player-strip" aria-label="Players">${state.players.map((p, i) => `<article class="player-card ${i === 0 ? "gold" : "blue"} ${state.current === i ? "active" : ""}">${avatar(i)}<div class="player-info"><h2>${esc(p.name)}</h2><p>${state.phase === "over" ? (state.winner === i ? "Victorious" : state.winner === "draw" ? "Quest drawn" : "Well played") : state.current === i ? "Your turn" : p.pos === 0 ? "At the gates" : "Awaiting turn"}</p></div><div class="wall-stock" aria-label="${wallCount(state, i)} of 3 walls in play"><span aria-hidden="true">♜</span><span>${wallCount(state, i)}<small> / 3 walls</small></span></div></article>`).join("")}</section>`;
+  return `<section class="player-strip" aria-label="Players">${state.players.map((p, i) => `<article class="player-card ${i === 0 ? "gold" : "blue"} ${state.current === i ? "active" : ""}">${avatar(i)}<div class="player-info"><h2>${esc(p.name)}</h2>${isComputerPlayer(state, i) ? `<span class="computer-badge">Computer · ${computerLevel()}</span>` : ""}<p>${state.phase === "over" ? (state.winner === i ? "Victorious" : state.winner === "draw" ? "Quest drawn" : "Well played") : state.current === i ? (isComputerPlayer(state, i) ? "Computer’s turn" : "Your turn") : p.pos === 0 ? "At the gates" : "Awaiting turn"}</p></div><div class="wall-stock" aria-label="${wallCount(state, i)} of 3 walls in play"><span aria-hidden="true">♜</span><span>${wallCount(state, i)}<small> / 3 walls</small></span></div></article>`).join("")}</section>`;
 }
 function board() {
   const choices = targets(state),
@@ -166,9 +175,9 @@ function board() {
           `<span class="piece ${i === 0 ? "gold" : "blue"} ${animation?.action === "move" && animation.target === pos && animation.player === i ? "arriving" : ""}" data-player="${i}" aria-hidden="true"><img src="./assets/${ART[i]}.jpg" alt=""><span>${COLORS[i][0]}</span></span>`,
       )
       .join("");
-    return `<button type="button" class="tile route-stone ${legal.has(pos) ? "available" : ""} ${selectedTile ? "targeted" : ""} ${occupiedClass} ${animation?.target === pos ? "just-" + animation.action : ""}" style="left:${node.x / 10}%;top:${node.y / 9.1}%;--tilt:${node.tilt}deg" data-do="target" data-pos="${pos}" aria-label="${esc(name)}" aria-pressed="${selectedTile}" ${state.phase !== "input" ? "disabled" : ""}><span class="tile-number">${number}</span>${pieces}${wall !== undefined ? `<span class="player-wall ${wall === 0 ? "gold" : "blue"}" aria-hidden="true">♜<small>${COLORS[wall][0]}</small></span>` : ""}${selectedTile ? '<span class="target-corner" aria-hidden="true">◆</span>' : ""}</button>`;
+    return `<button type="button" class="tile route-stone ${legal.has(pos) ? "available" : ""} ${selectedTile ? "targeted" : ""} ${occupiedClass} ${animation?.target === pos ? "just-" + animation.action : ""}" style="left:${node.x / 10}%;top:${node.y / 9.1}%;--tilt:${node.tilt}deg" data-do="target" data-pos="${pos}" aria-label="${esc(name)}" aria-pressed="${selectedTile}" ${!humanTurn() ? "disabled" : ""}><span class="tile-number">${number}</span>${pieces}${wall !== undefined ? `<span class="player-wall ${wall === 0 ? "gold" : "blue"}" aria-hidden="true">♜<small>${COLORS[wall][0]}</small></span>` : ""}${selectedTile ? '<span class="target-corner" aria-hidden="true">◆</span>' : ""}</button>`;
   }).join("");
-  return `<section class="board-section" aria-label="Quest trail"><div class="board-heading"><span><span class="eyebrow">THE WINDING ROAD</span><span class="turn-count">Turn ${state.turn}</span></span><button class="map-zoom" data-do="zoom-map" aria-pressed="${mapExpanded}">${mapExpanded ? "− Whole trail" : "+ Enlarge map"}</button></div><div class="board-frame path-frame"><div class="map-scroll ${mapExpanded ? "map-expanded" : ""}" tabindex="${mapExpanded ? "0" : "-1"}" aria-label="${mapExpanded ? "Enlarged map. Scroll to explore." : "Overview of the winding trail."}"><div class="route-map ${state.current === 0 ? "gold" : "blue"}"><svg class="trail-lines" viewBox="0 0 1000 910" aria-hidden="true"><defs><pattern id="road-stone" width="24" height="16" patternUnits="userSpaceOnUse"><image href="./assets/wall.jpg" x="-8" y="-26" width="145" height="73"/></pattern></defs>${segments}</svg><span class="region-label label-keep">THE OLD KEEP</span><span class="region-label label-wood">WHISPERING WOODS</span><span class="region-label label-pass">THE HIGH PASS</span><span class="region-label label-gates">THE GATES</span>${[0, 1].map((p) => `<div class="entry ${p === 0 ? "gold" : "blue"}" aria-label="${esc(state.players[p].name)} ${state.players[p].pos === 0 ? "at the gates" : "on the trail"}">${state.players[p].pos === 0 ? `<img src="./assets/${ART[p]}.jpg" alt=""><span>${COLORS[p][0]}</span>` : ""}</div>`).join("")}${stones}<button class="dragon route-lair ${state.draft.action === "slay" && legal.has(30) ? "available" : ""} ${state.draft.action === "slay" && active === 30 ? "targeted" : ""} ${state.phase === "over" && state.winner !== "draw" ? "defeated" : ""}" style="left:${LAIR.x / 10}%;top:${LAIR.y / 9.1}%" data-do="dragon" aria-label="Dragon, target ${state.dragon}${targets(state, "slay").length ? ", connected to your stone" : ", further along the trail"}" ${state.phase !== "input" ? "disabled" : ""}><img src="./assets/${state.phase === "over" && state.winner !== "draw" ? "victory" : "dragon"}.jpg" alt="${state.phase === "over" && state.winner !== "draw" ? "The dragon rests beside a crown" : "Emerald dragon guarding its lair"}"><span class="dragon-caption">THE DRAGON</span><strong>${state.dragon}</strong><span class="dragon-foot">${state.phase === "over" && state.winner !== "draw" ? "Defeated" : "Journey’s end"}</span></button></div></div></div><div class="trail-legend"><span><i aria-hidden="true"></i> Outlined stones are available</span><span>${mapExpanded ? "Scroll or swipe to explore" : "Follow the connected trail"}</span></div><details class="chronicle" ${historyOpen ? "open" : ""}><summary><span aria-hidden="true">▤</span> Battle Chronicle <small>${state.history.length} ${state.history.length === 1 ? "turn" : "turns"}</small></summary><ol>${state.history.length ? state.history.map((e) => `<li><span class="history-turn">${e.turn}</span><div><strong class="${e.player === 0 ? "text-gold" : "text-blue"}">${esc(e.name)}</strong> · ${e.action === "pass" ? "Passed" : label[e.action]}${e.number ? " · " + esc(e.number) : ""}<p>${e.expression ? `${esc(e.expression)} = ${esc(e.value)}` : "A moment to regroup."}<span> Dice ${esc(e.dice?.join(" · "))}${e.exception === "oracle-only-method" ? " · One-method exception (Oracle search)" : ""}</span></p></div></li>`).join("") : "<li>Your first step begins the story.</li>"}</ol></details></section>`;
+  return `<section class="board-section" aria-label="Quest trail"><div class="board-heading"><span><span class="eyebrow">THE WINDING ROAD</span><span class="turn-count">Turn ${state.turn}</span></span><button class="map-zoom" data-do="zoom-map" aria-pressed="${mapExpanded}">${mapExpanded ? "− Whole trail" : "+ Enlarge map"}</button></div><div class="board-frame path-frame"><div class="map-scroll ${mapExpanded ? "map-expanded" : ""}" tabindex="${mapExpanded ? "0" : "-1"}" aria-label="${mapExpanded ? "Enlarged map. Scroll to explore." : "Overview of the winding trail."}"><div class="route-map ${state.current === 0 ? "gold" : "blue"}"><svg class="trail-lines" viewBox="0 0 1000 910" aria-hidden="true"><defs><pattern id="road-stone" width="24" height="16" patternUnits="userSpaceOnUse"><image href="./assets/wall.jpg" x="-8" y="-26" width="145" height="73"/></pattern></defs>${segments}</svg><span class="region-label label-keep">THE OLD KEEP</span><span class="region-label label-wood">WHISPERING WOODS</span><span class="region-label label-pass">THE HIGH PASS</span><span class="region-label label-gates">THE GATES</span>${[0, 1].map((p) => `<div class="entry ${p === 0 ? "gold" : "blue"}" aria-label="${esc(state.players[p].name)} ${state.players[p].pos === 0 ? "at the gates" : "on the trail"}">${state.players[p].pos === 0 ? `<img src="./assets/${ART[p]}.jpg" alt=""><span>${COLORS[p][0]}</span>` : ""}</div>`).join("")}${stones}<button class="dragon route-lair ${state.draft.action === "slay" && legal.has(30) ? "available" : ""} ${state.draft.action === "slay" && active === 30 ? "targeted" : ""} ${state.phase === "over" && state.winner !== "draw" ? "defeated" : ""}" style="left:${LAIR.x / 10}%;top:${LAIR.y / 9.1}%" data-do="dragon" aria-label="Dragon, target ${state.dragon}${targets(state, "slay").length ? ", connected to your stone" : ", further along the trail"}" ${!humanTurn() ? "disabled" : ""}><img src="./assets/${state.phase === "over" && state.winner !== "draw" ? "victory" : "dragon"}.jpg" alt="${state.phase === "over" && state.winner !== "draw" ? "The dragon rests beside a crown" : "Emerald dragon guarding its lair"}"><span class="dragon-caption">THE DRAGON</span><strong>${state.dragon}</strong><span class="dragon-foot">${state.phase === "over" && state.winner !== "draw" ? "Defeated" : "Journey’s end"}</span></button></div></div></div><div class="trail-legend"><span><i aria-hidden="true"></i> Outlined stones are available</span><span>${mapExpanded ? "Scroll or swipe to explore" : "Follow the connected trail"}</span></div><details class="chronicle" ${historyOpen ? "open" : ""}><summary><span aria-hidden="true">▤</span> Battle Chronicle <small>${state.history.length} ${state.history.length === 1 ? "turn" : "turns"}</small></summary><ol>${state.history.length ? state.history.map((e) => `<li><span class="history-turn">${e.turn}</span><div><strong class="${e.player === 0 ? "text-gold" : "text-blue"}">${esc(e.name)}</strong> · ${e.action === "pass" ? "Passed" : label[e.action]}${e.number ? " · " + esc(e.number) : ""}<p>${e.expression ? `${esc(e.expression)} = ${esc(e.value)}` : "A moment to regroup."}<span> Dice ${esc(e.dice?.join(" · "))}${e.exception === "oracle-only-method" ? " · One-method exception (Oracle search)" : ""}</span></p></div></li>`).join("") : "<li>Your first step begins the story.</li>"}</ol></details></section>`;
 }
 function zoomMap() {
   mapExpanded = !mapExpanded;
@@ -223,8 +232,24 @@ function expressionEditor() {
       : ""
   }<div class="edit-actions"><button data-do="undo" ${undo.length ? "" : "disabled"}>↶ <span>Undo</span></button><button data-do="delete" ${d.tokens.length ? "" : "disabled"} aria-label="Delete selected piece or preceding piece">⌫ <span>Delete</span></button><button data-do="clear" ${d.tokens.length ? "" : "disabled"}>× <span>Clear</span></button></div>`;
 }
+function displayEquation(tokens) {
+  return tokens
+    .map((t) =>
+      t.kind === "die"
+        ? `<span>${t.value}${t.power !== "1" ? `<sup>${esc(t.power)}</sup>` : ""}</span>`
+        : esc(operators[t.value]),
+    )
+    .join(" ");
+}
+function computerPanel() {
+  const plan = computerView.plan;
+  const showing = computerView.status === "showing" && plan;
+  const complete = state.phase === "handoff";
+  return `<section class="turn-panel ornate blue computer-panel" id="turn-panel" tabindex="-1" aria-label="Computer turn"><div class="panel-turn"><span>${esc(state.players[state.current].name)} · Computer</span><i aria-hidden="true">◆</i></div><h1 class="turn-title">${complete ? "Your turn is next" : computerView.status === "error" ? "Let’s try that again" : showing ? (plan.action === "pass" ? "Passing this turn" : `${label[plan.action]}${plan.target ? ` · ${plan.action === "slay" ? state.dragon : state.board[plan.target - 1]}` : ""}`) : "Considering the trail…"}</h1><p class="computer-status" role="status">${complete ? "The computer has finished its move." : computerView.status === "error" ? esc(computerView.error) : showing ? esc(plan.reason) : `${computerLevel()} is finding an exact equation and choosing a move.`}</p><div class="computer-dice" aria-label="Computer’s rolled dice">${state.dice.map((n) => `<span>${n}</span>`).join("")}</div>${showing && plan.action !== "pass" ? `<div class="computer-equation"><span class="eyebrow">THE COMPUTER’S EQUATION</span><p>${displayEquation(plan.tokens)} <strong>= ${evaluate(plan.tokens, state.dice).display}</strong></p><small>All three dice used · exact result</small>${plan.departureCheck?.status === "only-method" ? '<p class="fine-print">One-method exception: the Oracle found no different method.</p>' : ""}</div>` : ""}<p class="fine-print">The computer follows the same dice, walls, and shared-stone rules as you.</p>${computerView.status === "error" ? '<button class="primary" data-do="retry-computer">Try computer turn again</button>' : ""}<button data-do="pause-computer">Pause computer</button></section>`;
+}
 function turnPanel() {
   if (state.phase === "over") return endPanel();
+  if (isComputerPlayer(state)) return computerPanel();
   const d = state.draft,
     choices = targets(state),
     target = choices.find((t) => t.pos === d.target),
@@ -260,8 +285,9 @@ function turnPanel() {
 }
 function endPanel() {
   const draw = state.winner === "draw",
+    computerWon = !draw && isComputerPlayer(state, state.winner),
     entry = state.history.at(-1);
-  return `<section class="turn-panel ornate end-panel" id="turn-panel" tabindex="-1"><div class="eyebrow">${draw ? "A WORTHY STALEMATE" : "THE KINGDOM IS YOURS"}</div><span class="victory-mark" aria-hidden="true">${draw ? "⚖" : "♛"}</span><h1>${draw ? "A quest well fought" : esc(state.players[state.winner].name) + " wins!"}</h1><p>${draw ? "Both knights have passed on their last three turns. Gather your courage for another quest." : "The dragon falls. Courage, strategy, and a little arithmetic have carried you home."}</p>${!draw ? `<div class="winning-equation">${esc(entry.expression)} <strong>= ${esc(entry.value)}</strong></div>` : ""}<div class="match-stats"><span><strong>${state.history.length}</strong> turns played</span><span><strong>${state.hintsUsed.reduce((a, b) => a + b, 0)}</strong> Oracle clues</span></div><button class="primary" data-do="rematch" data-same="true">Rematch this board →</button><button data-do="rematch">Begin a new quest</button><button class="text-button" data-do="share">Share Knight’s Path ↗</button><p class="fine-print">${esc(state.players[1 - state.starter].name)} goes first next time.</p></section>`;
+  return `<section class="turn-panel ornate end-panel" id="turn-panel" tabindex="-1"><div class="eyebrow">${draw ? "A WORTHY STALEMATE" : computerWon ? "A CHALLENGE WORTH ANOTHER TRY" : "THE KINGDOM IS YOURS"}</div><span class="victory-mark" aria-hidden="true">${draw ? "⚖" : "♛"}</span><h1>${draw ? "A quest well fought" : esc(state.players[state.winner].name) + " wins!"}</h1><p>${draw ? "Both knights have passed on their last three turns. Gather your courage for another quest." : computerWon ? "The computer reached the dragon first. Try another route or challenge it to a rematch." : "The dragon falls. Courage, strategy, and a little arithmetic have carried you home."}</p>${!draw ? `<div class="winning-equation">${esc(entry.expression)} <strong>= ${esc(entry.value)}</strong></div>` : ""}<div class="match-stats"><span><strong>${state.history.length}</strong> turns played</span><span><strong>${state.hintsUsed.reduce((a, b) => a + b, 0)}</strong> Oracle clues</span></div><button class="primary" data-do="rematch" data-same="true">Rematch this board →</button><button data-do="rematch">Begin a new quest</button><button class="text-button" data-do="share">Share Knight’s Path ↗</button><p class="fine-print">${esc(state.players[1 - state.starter].name)} goes first next time.</p></section>`;
 }
 function tutorialBanner() {
   return tutorial
@@ -301,6 +327,7 @@ function render() {
       candidate.focus({ preventScroll: true });
   }
   void checkSharedDeparture();
+  computerRunner?.sync();
 }
 function resetEditor() {
   departureCheck = null;
@@ -310,7 +337,7 @@ function resetEditor() {
   powersOpen = false;
 }
 function edit(change) {
-  if (state.phase !== "input" || practice) return;
+  if (!humanTurn() || practice) return;
   undo.push(structuredClone(state.draft));
   if (undo.length > 60) undo.shift();
   try {
@@ -324,7 +351,7 @@ function edit(change) {
   }
 }
 function changeAction(action) {
-  if (state.phase !== "input") return;
+  if (!humanTurn()) return;
   state.draft.action = action;
   state.draft.target = null;
   hint = { level: 0, target: null, solution: null, status: "idle" };
@@ -339,7 +366,7 @@ function changeAction(action) {
   );
 }
 function chooseTarget(pos) {
-  if (state.phase !== "input") return;
+  if (!humanTurn()) return;
   const target = targets(state).find((t) => t.pos === pos);
   if (!target) {
     toast(
@@ -395,7 +422,8 @@ function animateMove(from, entry) {
   };
   motion.finished.then(cleanup, cleanup);
 }
-function perform(pass = false) {
+function perform(pass = false, computer = false) {
+  if (isComputerPlayer(state) && !computer) return false;
   if (
     tutorial &&
     !pass &&
@@ -418,7 +446,7 @@ function perform(pass = false) {
   const result = commitAction(state, { pass, departureCheck });
   if (!result.ok) {
     toast(result.message);
-    return;
+    return false;
   }
   state = result.state;
   animation = result.entry;
@@ -441,7 +469,7 @@ function perform(pass = false) {
   }
   if (state.phase === "over") {
     showVictory();
-    return;
+    return true;
   }
   const id = state.id;
   clearTimeout(timer);
@@ -462,8 +490,11 @@ function perform(pass = false) {
     },
     reduced() ? 160 : 900,
   );
+  return true;
 }
 function newMatch(options = {}) {
+  computerRunner?.cancel();
+  computerView = { status: "idle", plan: null, error: "" };
   clearTimeout(timer);
   state = newGame(options);
   mapExpanded = false;
@@ -487,11 +518,14 @@ function rematch(same) {
   newMatch({
     names: state.players.map((p) => p.name),
     hints: state.hints,
+    mode: state.mode,
+    difficulty: state.difficulty,
     starter: 1 - state.starter,
     ...(same ? { board: state.board, dragon: state.dragon } : {}),
   });
 }
 function openDialog(title, content, { closable = true, kind = "" } = {}) {
+  computerRunner?.cancel();
   const d = $("#dialog");
   if (d.open) d.close();
   d.className = kind;
@@ -500,20 +534,23 @@ function openDialog(title, content, { closable = true, kind = "" } = {}) {
 }
 function closeDialog() {
   $("#dialog").close();
+  queueMicrotask(() => computerRunner?.sync());
 }
 function welcome() {
   openDialog(
     loaded.state ? "Your quest awaits." : "Three dice. One grand adventure.",
-    `<p class="dialog-lead">${loaded.state ? "Your knights, dice, and last expression are just as you left them." : "Forge an expression. Find your path. Be the first knight to conquer the dragon."}</p><div class="welcome-art"><img src="./assets/dragon.jpg" alt="The emerald dragon awaits"></div><p class="welcome-caption">2 players · 1 device · endless possibilities</p><div class="dialog-actions">${loaded.state ? '<button class="primary" data-do="resume">Continue quest →</button>' : '<button class="primary" data-do="setup">Begin a quest →</button>'}<button data-do="tutorial">Learn as you play</button><button class="text-button" data-do="practice">Practice with the Oracle ↗</button></div>`,
+    `<p class="dialog-lead">${loaded.state ? "Your knights, dice, and last expression are just as you left them." : "Forge an expression. Find your path. Be the first knight to conquer the dragon."}</p><div class="welcome-art"><img src="./assets/dragon.jpg" alt="The emerald dragon awaits"></div><p class="welcome-caption">1 or 2 players · 1 device · endless possibilities</p><div class="dialog-actions">${loaded.state ? '<button class="primary" data-do="resume">Continue quest →</button>' : '<button class="primary" data-do="setup">Begin a quest →</button>'}<button data-do="tutorial">Learn as you play</button><button class="text-button" data-do="practice">Practice with the Oracle ↗</button></div>`,
     { kind: "welcome-dialog" },
   );
 }
 function setup() {
+  const solo = state.mode === "computer";
   openDialog(
     "Choose your champions",
-    `<p class="dialog-lead">Pass one device between two players. Make numbers to move, outwit your opponent, and reach the dragon.</p><form id="setup-form"><div class="setup-players">${[0, 1].map((i) => `<label class="setup-player ${i === 0 ? "gold" : "blue"}">${avatar(i)}<span>${COLORS[i]} champion</span><input name="player${i}" aria-label="${COLORS[i]} player name" maxlength="28" placeholder="${COLORS[i]} Knight" value="${esc(state.players[i].name)}"></label>`).join("")}</div><label class="check-row"><input name="hints" type="checkbox" checked> Allow Oracle hints <small>Clues teach without costing a turn.</small></label><div class="rules-glance"><p><b>01</b> Use all three dice once. Powers are free.</p><p><b>02</b> Make a connected stone’s number to advance.</p><p><b>03</b> Reach the dragon and make its number to win.</p></div><button class="primary" type="submit">Open the gates →</button></form>`,
+    `<p class="dialog-lead">Play against the computer or share a device with a friend. Make numbers, choose your path, and race to the dragon.</p><form id="setup-form"><fieldset class="mode-choice"><legend>How would you like to play?</legend><label><input type="radio" name="mode" value="computer" ${solo ? "checked" : ""}><span><strong>1 player</strong><small>Challenge the computer</small></span></label><label><input type="radio" name="mode" value="two-player" ${!solo ? "checked" : ""}><span><strong>2 players</strong><small>Play together on one device</small></span></label></fieldset><div id="computer-options" ${solo ? "" : "hidden"}><label class="field-label" for="difficulty">Your computer opponent</label><select id="difficulty" name="difficulty"><option value="squire" ${state.difficulty === "squire" ? "selected" : ""}>Squire · a friendly race</option><option value="knight" ${state.difficulty !== "squire" ? "selected" : ""}>Knight · a tactical challenge</option></select><p class="fine-print">Squire focuses on moving and clearing walls. Knight also builds walls to slow you down. Both use the same math rules.</p></div><div class="setup-players"><label class="setup-player gold">${avatar(0)}<span>Your Gold champion</span><input name="player0" aria-label="Gold player name" maxlength="28" placeholder="Gold Knight" value="${esc(state.players[0].name)}"></label><label id="human-opponent" class="setup-player blue" ${solo ? "hidden" : ""}>${avatar(1)}<span>Blue champion</span><input name="player1" aria-label="Blue player name" maxlength="28" placeholder="Blue Knight" value="${esc(isComputerPlayer(state, 1) ? "Blue Knight" : state.players[1].name)}"></label><div id="computer-opponent" class="setup-player blue" ${solo ? "" : "hidden"}>${avatar(1)}<span>Computer champion</span><strong>Blue Knight</strong></div></div><label class="check-row"><input name="hints" type="checkbox" ${state.hints ? "checked" : ""}> Allow Oracle hints <small>Clues teach without costing a turn.</small></label><div class="rules-glance"><p><b>01</b> Use all three dice once. Powers are free.</p><p><b>02</b> Make a connected stone’s number to advance.</p><p><b>03</b> Reach the dragon and make its number to win.</p></div><button class="primary" type="submit">Open the gates →</button></form>`,
   );
 }
+
 function confirmNew() {
   if (
     state.phase === "over" ||
@@ -542,7 +579,7 @@ function preferences() {
 function rules() {
   openDialog(
     "A path worth figuring out",
-    `<div class="rules-content"><p class="dialog-lead">Roll three dice, create an expression, and take one action. The first knight to reach and defeat the dragon wins.</p><details open><summary>The math</summary><p>Use each rolled die exactly once. Two dice with the same value are still separate pieces. Add, subtract, multiply, divide, and group with parentheses.</p><p>Powers are free: <b>2² + 3² + 5 = 18</b> uses dice 2, 3, and 5. A root is a fractional power: √4 = 4<sup>1/2</sup>. Rolls with two or three ones are automatically rerolled.</p><p>The result must exactly equal the target. Close approximations do not count.</p></details><details><summary>Moving & the dragon</summary><p>Enter through either stone connected to the gates. Each turn, move one connection along the visible trail, forward or backward. At forks, choose your route. You cannot jump across gaps. Both knights may share a stone and are shown side by side; knights do not block each other. If one knight leaves a shared stone, the other must use a different calculation to follow to the same destination. Swapping number order, identical dice, redundant parentheses, or equivalent regrouping does not count. Exception: when the Oracle finds no different method for your current dice and target, you may repeat the equation. This automatic check also works with hints off. The check covers the Oracle’s preset powers; custom powers may yield other answers. Search errors never unlock a repeat. The reminder stays until you leave that stone; passing or another action does not erase it. Once on the trail, you cannot return to the gates. Outlines mark legal choices, not guaranteed solutions.</p><p>From a stone connected directly to the dragon, choose “Slay dragon” and make its number. You win immediately.</p></details><details><summary>Walls & passing</summary><p>Build on a stone connected to your opponent by making that stone’s number. You may have three walls in play. You cannot build on a stone occupied by either knight. You can cross your own walls; opposing walls block you even if another knight is there.</p><p>Break any opposing wall by making <b>twice</b> its number, even from far away. Breaking takes a turn and returns that wall to its owner’s supply.</p><p>Passing ends your turn. If both players pass on their last three personal turns, the quest is a draw. A successful action resets your own pass count.</p></details><details><summary>Editor & keyboard</summary><p>Click a piece to replace it or change its power. Use “Insert after” to add beside it. Delete removes the selected piece or the piece before the cursor. Undo reverses an entire edit.</p><p>Type a die’s number to use an available matching die; Alt + 1/2/3 chooses a particular die. Use + − * / ( ), arrow keys to move the insertion point, Backspace/Delete to remove, Ctrl/⌘ + Z to undo, and Enter for a valid action.</p></details><details><summary>Oracle & app rules</summary><p>The Oracle offers an operation clue, a partial expression, and a verified solution. Its search is limited: “No solution found” does not mean a target is impossible.</p><p>In this app, free powers attach to individual dice, not whole grouped expressions. Digit concatenation is not allowed. Practical limits: 64 expression pieces, powers with numerator up to ±128 and denominator up to 64. These are app choices, not official competition limits.</p><p>Knight’s Path adapts the arithmetic of National Number Knockout into its own adventure. <a href="https://classicalconversations.com/national-number-knockout/" target="_blank" rel="noopener">Official N2K resources ↗</a></p></details></div><button class="primary" data-do="close">Back to the adventure</button>`,
+    `<div class="rules-content"><p class="dialog-lead">Roll three dice, create an expression, and take one action. The first knight to reach and defeat the dragon wins.</p><details><summary>Playing against the computer</summary><p>Choose 1 player when starting a quest. You control Gold; the computer controls Blue. Squire focuses on racing and clearing walls. Knight also places tactical walls. Both use the rolled dice, exact math, and the same shared-stone rules, including the one-method exception.</p><p>The computer shows its equation before acting. Opening a menu, practice, or the tutorial pauses it; returning resumes its turn. Refresh restores the quest without giving the computer an extra move. Rematches keep your mode and opponent and alternate who starts.</p></details><details open><summary>The math</summary><p>Use each rolled die exactly once. Two dice with the same value are still separate pieces. Add, subtract, multiply, divide, and group with parentheses.</p><p>Powers are free: <b>2² + 3² + 5 = 18</b> uses dice 2, 3, and 5. A root is a fractional power: √4 = 4<sup>1/2</sup>. Rolls with two or three ones are automatically rerolled.</p><p>The result must exactly equal the target. Close approximations do not count.</p></details><details><summary>Moving & the dragon</summary><p>Enter through either stone connected to the gates. Each turn, move one connection along the visible trail, forward or backward. At forks, choose your route. You cannot jump across gaps. Both knights may share a stone and are shown side by side; knights do not block each other. If one knight leaves a shared stone, the other must use a different calculation to follow to the same destination. Swapping number order, identical dice, redundant parentheses, or equivalent regrouping does not count. Exception: when the Oracle finds no different method for your current dice and target, you may repeat the equation. This automatic check also works with hints off. The check covers the Oracle’s preset powers; custom powers may yield other answers. Search errors never unlock a repeat. The reminder stays until you leave that stone; passing or another action does not erase it. Once on the trail, you cannot return to the gates. Outlines mark legal choices, not guaranteed solutions.</p><p>From a stone connected directly to the dragon, choose “Slay dragon” and make its number. You win immediately.</p></details><details><summary>Walls & passing</summary><p>Build on a stone connected to your opponent by making that stone’s number. You may have three walls in play. You cannot build on a stone occupied by either knight. You can cross your own walls; opposing walls block you even if another knight is there.</p><p>Break any opposing wall by making <b>twice</b> its number, even from far away. Breaking takes a turn and returns that wall to its owner’s supply.</p><p>Passing ends your turn. If both players pass on their last three personal turns, the quest is a draw. A successful action resets your own pass count.</p></details><details><summary>Editor & keyboard</summary><p>Click a piece to replace it or change its power. Use “Insert after” to add beside it. Delete removes the selected piece or the piece before the cursor. Undo reverses an entire edit.</p><p>Type a die’s number to use an available matching die; Alt + 1/2/3 chooses a particular die. Use + − * / ( ), arrow keys to move the insertion point, Backspace/Delete to remove, Ctrl/⌘ + Z to undo, and Enter for a valid action.</p></details><details><summary>Oracle & app rules</summary><p>The Oracle offers an operation clue, a partial expression, and a verified solution. Its search is limited: “No solution found” does not mean a target is impossible.</p><p>In this app, free powers attach to individual dice, not whole grouped expressions. Digit concatenation is not allowed. Practical limits: 64 expression pieces, powers with numerator up to ±128 and denominator up to 64. These are app choices, not official competition limits.</p><p>Knight’s Path adapts the arithmetic of National Number Knockout into its own adventure. <a href="https://classicalconversations.com/national-number-knockout/" target="_blank" rel="noopener">Official N2K resources ↗</a></p></details></div><button class="primary" data-do="close">Back to the adventure</button>`,
   );
 }
 function showVictory() {
@@ -563,7 +600,7 @@ async function share() {
   url.hash = "";
   const data = {
     title: "Knight’s Path",
-    text: "Three dice. One grand adventure. Play a math duel together.",
+    text: "Three dice. One grand adventure. Challenge the computer or a friend.",
     url: url.href,
   };
   try {
@@ -572,12 +609,12 @@ async function share() {
       return;
     }
     await navigator.clipboard.writeText(url.href);
-    toast("Game link copied. Play together on one device.");
+    toast("Game link copied. Challenge the computer or play with a friend.");
   } catch (error) {
     if (error.name !== "AbortError")
       openDialog(
         "Share the adventure",
-        `<p>Copy this game link. It opens the game for a new same-device duel.</p><input class="share-url" aria-label="Game link" readonly value="${esc(url.href)}"><button class="primary" data-do="close">Done</button>`,
+        `<p>Copy this game link. It opens the game for a solo challenge or a duel with a friend.</p><input class="share-url" aria-label="Game link" readonly value="${esc(url.href)}"><button class="primary" data-do="close">Done</button>`,
       );
   }
 }
@@ -628,7 +665,7 @@ function getSolutions(dice, min = 1, max = 72, exclude = [], previous = null) {
   });
 }
 async function checkSharedDeparture() {
-  if (practice || state.phase !== "input") return;
+  if (practice || !humanTurn()) return;
   const preview = previewAction(state);
   if (preview.code !== "repeated-method") return;
   const pos = preview.target.pos,
@@ -669,7 +706,7 @@ async function checkSharedDeparture() {
   }
 }
 async function requestHint() {
-  if (!state.hints || state.phase !== "input") return;
+  if (!state.hints || !humanTurn()) return;
   const target = targets(state).find((t) => t.pos === state.draft.target);
   if (!target) {
     toast("Choose a target first so the Oracle knows what you need.");
@@ -742,6 +779,7 @@ function setRoute(value) {
     history.replaceState(null, "", value ? "#practice" : location.pathname);
 }
 function openPractice() {
+  computerRunner?.cancel();
   if (state.phase === "handoff") {
     clearTimeout(timer);
     state = finishTurn(state);
@@ -837,6 +875,7 @@ const LESSONS = [
   },
 ];
 function startTutorial() {
+  computerRunner?.cancel();
   if (tutorial) {
     closeDialog();
     return;
@@ -896,7 +935,38 @@ function recovery() {
 }
 async function handleAction(el) {
   const action = el.dataset.do;
+  const turnActions = [
+    "action",
+    "target",
+    "dragon",
+    "die",
+    "op",
+    "select-piece",
+    "cursor",
+    "after-piece",
+    "undo",
+    "delete",
+    "clear",
+    "powers",
+    "power",
+    "commit",
+    "pass",
+    "confirm-pass",
+    "hint",
+    "apply-hint",
+    "retry-departure",
+  ];
+  if (isComputerPlayer(state) && turnActions.includes(action)) return;
   switch (action) {
+    case "pause-computer":
+      openDialog(
+        "Computer paused",
+        '<p>Take your time. The computer will continue when you return to the quest.</p><div class="dialog-actions"><button class="primary" data-do="close">Resume quest →</button><button data-do="practice">Practice with the Oracle</button></div>',
+      );
+      break;
+    case "retry-computer":
+      computerRunner.retry();
+      break;
     case "zoom-map":
       zoomMap();
       break;
@@ -1102,7 +1172,13 @@ document.addEventListener("click", (event) => {
   handleAction(el);
 });
 document.addEventListener("change", (event) => {
-  if (event.target.id === "target-select") {
+  if (event.target.name === "mode" && event.target.closest("#setup-form")) {
+    const solo = event.target.value === "computer";
+    $("#computer-options").hidden = !solo;
+    $("#computer-opponent").hidden = !solo;
+    $("#human-opponent").hidden = solo;
+  }
+  if (event.target.id === "target-select" && humanTurn()) {
     if (event.target.value) chooseTarget(Number(event.target.value));
     else {
       state.draft.target = null;
@@ -1119,9 +1195,13 @@ document.addEventListener("submit", async (event) => {
     newMatch({
       names: [
         String(data.get("player0")).trim() || "Gold Knight",
-        String(data.get("player1")).trim() || "Blue Knight",
+        data.get("mode") === "computer"
+          ? "Blue Knight"
+          : String(data.get("player1")).trim() || "Blue Knight",
       ],
       hints: data.has("hints"),
+      mode: data.get("mode"),
+      difficulty: data.get("difficulty"),
     });
   }
   if (form.id === "settings-form") {
@@ -1178,7 +1258,7 @@ document.addEventListener("keydown", (event) => {
     practice ||
     event.target.classList?.contains("map-scroll") ||
     ["INPUT", "SELECT", "TEXTAREA"].includes(event.target.tagName) ||
-    state.phase !== "input"
+    !humanTurn()
   )
     return;
   const key = event.key;
@@ -1232,13 +1312,115 @@ $("#dialog").addEventListener("cancel", (event) => {
   if (saveBlocked && $("#dialog").querySelector('[data-do="temporary"]'))
     event.preventDefault();
 });
-window.addEventListener("pagehide", save);
+$("#dialog").addEventListener("close", () =>
+  queueMicrotask(() => computerRunner?.sync()),
+);
+document.addEventListener("visibilitychange", () => computerRunner?.sync());
+window.addEventListener("pagehide", () => {
+  computerRunner?.cancel();
+  save();
+});
+window.addEventListener("pageshow", () => computerRunner?.sync());
 window.addEventListener("hashchange", () => {
   practice = location.hash === "#practice";
   render();
 });
 motionQuery.addEventListener("change", () => {
   applySettings();
+});
+function requestComputerPlan(signal) {
+  return new Promise((resolve, reject) => {
+    let engine;
+    let timeout;
+    const stop = () => {
+      clearTimeout(timeout);
+      engine?.terminate();
+      signal.removeEventListener("abort", abort);
+    };
+    const abort = () => {
+      stop();
+      reject(new Error("Computer turn paused."));
+    };
+    try {
+      engine = new Worker(new URL("./computer.worker.js", import.meta.url), {
+        type: "module",
+      });
+      engine.onmessage = ({ data }) => {
+        stop();
+        data.error ? reject(new Error(data.error)) : resolve(data.plan);
+      };
+      engine.onerror = () => {
+        stop();
+        reject(new Error("The computer could not finish. Please try again."));
+      };
+      timeout = setTimeout(() => {
+        stop();
+        reject(new Error("The computer took too long. Please try again."));
+      }, 12000);
+      signal.addEventListener("abort", abort, { once: true });
+      if (signal.aborted) {
+        abort();
+        return;
+      }
+      engine.postMessage(structuredClone(state));
+    } catch (error) {
+      stop();
+      reject(error);
+    }
+  });
+}
+computerRunner = createComputerTurnRunner({
+  getKey: () =>
+    isComputerPlayer(state) &&
+    state.phase === "input" &&
+    !practice &&
+    !tutorial &&
+    !$("#dialog").open &&
+    !document.hidden
+      ? `${state.id}:${state.turn}:${state.current}`
+      : null,
+  plan: requestComputerPlan,
+  report: (status, error = "") => {
+    computerView = { status, error, plan: null };
+    render();
+  },
+  show: (plan) => {
+    if (
+      !plan ||
+      !["move", "build", "break", "slay", "pass"].includes(plan.action)
+    )
+      throw Error("The computer could not verify its move. Please try again.");
+    if (plan.action !== "pass") {
+      const draft = {
+        action: plan.action,
+        target: plan.target,
+        tokens: plan.tokens,
+        cursor: plan.tokens.length,
+      };
+      const check = previewAction(
+        { ...state, draft },
+        { departureCheck: plan.departureCheck },
+      );
+      if (!check.ok)
+        throw Error(
+          "The computer could not verify its equation. Please try again.",
+        );
+      state.draft = draft;
+      departureCheck = plan.departureCheck;
+    }
+    computerView = { status: "showing", plan, error: "" };
+    save();
+    render();
+    announce(
+      `${state.players[state.current].name}: ${plan.reason}${plan.action !== "pass" ? ` ${expressionText(plan.tokens)} = ${evaluate(plan.tokens, state.dice).display}.` : ""}`,
+    );
+  },
+  commit: (plan) => {
+    if (!perform(plan.action === "pass", true))
+      throw Error(
+        "The computer’s move could not be completed. Please try again.",
+      );
+  },
 });
 render();
 if (!practice) {

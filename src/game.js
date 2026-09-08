@@ -12,6 +12,10 @@ export const VERSION = 3,
   DRAGON = [DRAGON_POS],
   MAX_WALLS = 3,
   ACTIONS = ["move", "build", "break", "slay"];
+export const GAME_MODES = ["two-player", "computer"];
+export const COMPUTER_LEVELS = ["squire", "knight"];
+export const isComputerPlayer = (s, player = s.current) =>
+  s.mode === "computer" && player === 1;
 function nextRandom(s) {
   let t = (s.rng += 0x6d2b79f5);
   t = Math.imul(t ^ (t >>> 15), t | 1);
@@ -35,10 +39,14 @@ export function newGame({
   starter = 0,
   board = null,
   dragon = null,
+  mode = "two-player",
+  difficulty = "knight",
 } = {}) {
   const s = {
     version: VERSION,
     route: ROUTE_ID,
+    mode: GAME_MODES.includes(mode) ? mode : "two-player",
+    difficulty: COMPUTER_LEVELS.includes(difficulty) ? difficulty : "knight",
     id: `${seed}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
     seed: seed >>> 0,
     rng: seed >>> 0,
@@ -343,6 +351,10 @@ export function validateSave(raw) {
     if (raw.players.some((p, i) => p.pos && raw.walls[p.pos] === 1 - i))
       return null;
     const s = structuredClone(raw);
+    s.mode ??= "two-player";
+    s.difficulty ??= "knight";
+    if (!GAME_MODES.includes(s.mode) || !COMPUTER_LEVELS.includes(s.difficulty))
+      return null;
     if (s.sharedExit === undefined) s.sharedExit = [null, null];
     if (!Array.isArray(s.sharedExit) || s.sharedExit.length !== 2) return null;
     for (const [player, rule] of s.sharedExit.entries()) {

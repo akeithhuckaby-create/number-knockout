@@ -2,6 +2,14 @@
 
 This is the approved replacement for the earlier rectangular board. It changes movement as well as appearance: visible connections are the legal routes. The old grid's diagonal movement and fixed horizontal barriers no longer apply.
 
+## One or two players
+
+Choose **1 player** to control Gold against the Blue computer knight, or **2 players** to pass one device between friends. The first quest starts with Gold. Squire focuses on racing and clearing walls; Knight also builds walls that delay its opponent. Both use the same dice and math rules, the same one-action turns, and the same shared-stone equation restriction and one-method exception. Neither looks ahead at future rolls.
+
+The computer searches in a worker, displays its rolled dice and verified equation, and then takes its turn. Its search uses the Oracle presets, so it can miss a solution involving other custom powers. It may pass when it finds no useful action; this is not a claim that the roll has no mathematical answer.
+
+Opening a menu, practice or tutorial, or hiding the tab pauses the computer. Returning resumes it. A failed search offers a retry without spending the turn. Existing two-player saves stay two-player; new solo saves retain the selected opponent. Rematches retain the mode and difficulty and alternate who starts.
+
 ## Adventure rules
 
 | Action or condition | Rule                                                                                                                                                                                                 |
